@@ -1,6 +1,6 @@
 import type { LoginRequest, RegisterRequest, AuthResponse } from "@/types/auth"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://d3cfeb645d76.ngrok-free.app"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://3c25d5c5b9b3.ngrok-free.app"
 
 export async function loginUser(credentials: LoginRequest): Promise<AuthResponse> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
