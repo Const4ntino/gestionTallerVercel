@@ -1,7 +1,8 @@
 {
   "scripts": {
-    "preinstall": "pnpm set-script ignored-scripts sharp && pnpm exec -r echo",
-    "install-date-fns": "npm install date-fns"
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.1.4",
