@@ -1,152 +1,152 @@
-import type {
-  MantenimientoResponse,
-  MantenimientoRequest,
-  MantenimientoFilterParams,
-  PageResponse,
-  VehiculoResponse,
-  ServicioResponse,
-  TrabajadorResponse,
-  ProductoResponse,
-} from "@/types/mantenimientos"
+import { authFetch } from "./auth"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://d3cfeb645d76.ngrok-free.app"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
-function getAuthHeaders() {
-  const token = localStorage.getItem("token")
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
+// Interfaces para mantenimientos
+export interface VehiculoResponse {
+  id: number
+  cliente: {
+    id: number
+    usuario: {
+      nombreCompleto: string
+    }
+    telefono: string
+    direccion: string
+    tallerAsignado: {
+      id: number
+      nombre: string
+    }
+  }
+  placa: string
+  marca: string
+  modelo: string
+  anio: number
+  motor: string
+  tipoVehiculo: string
+  estado: string
+  fechaCreacion: string
+  fechaActualizacion: string
+}
+
+export interface ServicioResponse {
+  id: number
+  nombre: string
+  descripcion: string
+  precio: number
+  taller: {
+    id: number
+    nombre: string
   }
 }
 
-// ===== MANTENIMIENTOS API =====
+export interface TrabajadorResponse {
+  id: number
+  usuario: {
+    nombreCompleto: string
+  }
+  especialidad: string
+  taller: {
+    id: number
+    nombre: string
+  }
+}
+
+export interface ProductoResponse {
+  id: number
+  nombre: string
+  descripcion: string
+  precio: number
+  stock: number
+  categoria: {
+    id: number
+    nombre: string
+  }
+}
+
+// API para mantenimientos
 export const mantenimientosApi = {
-  getAll: async (): Promise<MantenimientoResponse[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/mantenimientos`, {
-      headers: getAuthHeaders(),
-    })
+  getAll: async () => {
+    const response = await authFetch(`${API_BASE_URL}/api/mantenimientos`)
     if (!response.ok) throw new Error("Error al obtener mantenimientos")
     return response.json()
   },
 
-  getById: async (id: number): Promise<MantenimientoResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/mantenimientos/${id}`, {
-      headers: getAuthHeaders(),
-    })
+  getById: async (id: number) => {
+    const response = await authFetch(`${API_BASE_URL}/api/mantenimientos/${id}`)
     if (!response.ok) throw new Error("Error al obtener mantenimiento")
     return response.json()
   },
 
-  create: async (data: MantenimientoRequest): Promise<MantenimientoResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/mantenimientos`, {
+  create: async (data: any) => {
+    const response = await authFetch(`${API_BASE_URL}/api/mantenimientos`, {
       method: "POST",
-      headers: getAuthHeaders(),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
     if (!response.ok) throw new Error("Error al crear mantenimiento")
     return response.json()
   },
 
-  update: async (id: number, data: MantenimientoRequest): Promise<MantenimientoResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/mantenimientos/${id}`, {
+  update: async (id: number, data: any) => {
+    const response = await authFetch(`${API_BASE_URL}/api/mantenimientos/${id}`, {
       method: "PUT",
-      headers: getAuthHeaders(),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
     if (!response.ok) throw new Error("Error al actualizar mantenimiento")
     return response.json()
   },
 
-  delete: async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/mantenimientos/${id}`, {
+  delete: async (id: number) => {
+    const response = await authFetch(`${API_BASE_URL}/api/mantenimientos/${id}`, {
       method: "DELETE",
-      headers: getAuthHeaders(),
     })
     if (!response.ok) throw new Error("Error al eliminar mantenimiento")
   },
-
-  filter: async (params: MantenimientoFilterParams): Promise<PageResponse<MantenimientoResponse>> => {
-    const searchParams = new URLSearchParams()
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        searchParams.append(key, value.toString())
-      }
-    })
-
-    const response = await fetch(`${API_BASE_URL}/api/mantenimientos/filtrar?${searchParams}`, {
-      headers: getAuthHeaders(),
-    })
-    if (!response.ok) throw new Error("Error al filtrar mantenimientos")
-    return response.json()
-  },
 }
 
-// ===== APIS AUXILIARES =====
+// API para vehículos
 export const vehiculosApi = {
-  getAll: async (): Promise<VehiculoResponse[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/vehiculos`, {
-      headers: getAuthHeaders(),
-    })
+  getAll: async () => {
+    const response = await authFetch(`${API_BASE_URL}/api/vehiculos`)
     if (!response.ok) throw new Error("Error al obtener vehículos")
     return response.json()
   },
 
-  filter: async (search?: string, estado?: string): Promise<PageResponse<VehiculoResponse>> => {
-    const searchParams = new URLSearchParams()
-    if (search) searchParams.append("search", search)
-    if (estado) searchParams.append("estado", estado)
-    searchParams.append("size", "50") // Aumentamos el tamaño para mejor búsqueda
+  filter: async (search = "", estado = "") => {
+    const params = new URLSearchParams()
+    if (search) params.append("search", search)
+    if (estado) params.append("estado", estado)
 
-    const response = await fetch(`${API_BASE_URL}/api/vehiculos/filtrar?${searchParams}`, {
-      headers: getAuthHeaders(),
-    })
+    const response = await authFetch(`${API_BASE_URL}/api/vehiculos/filtrar?${params.toString()}`)
     if (!response.ok) throw new Error("Error al filtrar vehículos")
     return response.json()
   },
 }
 
+// API para servicios de mantenimiento
 export const serviciosMantenimientoApi = {
-  getAll: async (): Promise<ServicioResponse[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/servicios`, {
-      headers: getAuthHeaders(),
-    })
+  getAll: async () => {
+    const response = await authFetch(`${API_BASE_URL}/api/servicios`)
     if (!response.ok) throw new Error("Error al obtener servicios")
     return response.json()
   },
 }
 
+// API para trabajadores de mantenimiento
 export const trabajadoresMantenimientoApi = {
-  getAll: async (): Promise<TrabajadorResponse[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/trabajadores`, {
-      headers: getAuthHeaders(),
-    })
+  getAll: async () => {
+    const response = await authFetch(`${API_BASE_URL}/api/trabajadores`)
     if (!response.ok) throw new Error("Error al obtener trabajadores")
     return response.json()
   },
 }
 
+// API para productos de mantenimiento
 export const productosMantenimientoApi = {
-  getAll: async (): Promise<ProductoResponse[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/productos`, {
-      headers: getAuthHeaders(),
-    })
+  getAll: async () => {
+    const response = await authFetch(`${API_BASE_URL}/api/productos`)
     if (!response.ok) throw new Error("Error al obtener productos")
-    const data = await response.json()
-    return Array.isArray(data) ? data : data.content || []
-  },
-
-  filterByTaller: async (tallerId: number, search?: string): Promise<ProductoResponse[]> => {
-    const searchParams = new URLSearchParams()
-    searchParams.append("tallerId", tallerId.toString())
-    if (search) {
-      searchParams.append("search", search)
-    }
-
-    const response = await fetch(`${API_BASE_URL}/api/productos/filtrar?${searchParams}`, {
-      headers: getAuthHeaders(),
-    })
-    if (!response.ok) throw new Error("Error al obtener productos")
-    const data = await response.json()
-    return data.content || []
+    return response.json()
   },
 }

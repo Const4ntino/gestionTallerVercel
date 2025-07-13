@@ -115,7 +115,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     try {
       setIsLoading(true)
       const [vehiculosData, serviciosData, trabajadoresData, productosData] = await Promise.all([
-        vehiculosApi.filter("", "ACTIVO"), // Solo vehículos activos
+        vehiculosApi.filter("", "ACTIVO"),
         serviciosMantenimientoApi.getAll(),
         trabajadoresMantenimientoApi.getAll(),
         productosMantenimientoApi.getAll(),
@@ -301,7 +301,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                 onValueChange={(value) => setValue("trabajadorId", value ? Number.parseInt(value) : undefined)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un trabajador" />
+                  <SelectValue placeholder="Sin asignar" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">Sin asignar</SelectItem> // Updated value to "0"
