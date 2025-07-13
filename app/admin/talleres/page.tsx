@@ -9,6 +9,7 @@ import { Plus, Edit, Trash2, MapPin } from "lucide-react"
 import { talleresApi } from "@/lib/admin-api"
 import type { TallerResponse, PageResponse } from "@/types/admin"
 import { toast } from "sonner"
+import { TallerFormModal } from "@/components/admin/forms/taller-form-modal"
 
 export default function TalleresPage() {
   const [talleres, setTalleres] = useState<TallerResponse[]>([])
@@ -16,6 +17,8 @@ export default function TalleresPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedTaller, setSelectedTaller] = useState<TallerResponse | null>(null)
 
   const loadTalleres = async (page = 0, size = 10, search = "") => {
     try {
@@ -123,7 +126,8 @@ export default function TalleresPage() {
         variant="outline"
         size="sm"
         onClick={() => {
-          toast.info("Función de edición próximamente")
+          setSelectedTaller(taller)
+          setModalOpen(true)
         }}
       >
         <Edit className="h-4 w-4" />
@@ -142,7 +146,12 @@ export default function TalleresPage() {
             <h2 className="text-3xl font-bold tracking-tight">Talleres</h2>
             <p className="text-muted-foreground">Gestiona todos los talleres del sistema</p>
           </div>
-          <Button onClick={() => toast.info("Función de creación próximamente")}>
+          <Button
+            onClick={() => {
+              setSelectedTaller(null)
+              setModalOpen(true)
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Taller
           </Button>
@@ -162,6 +171,12 @@ export default function TalleresPage() {
           actions={actions}
         />
       </div>
+      <TallerFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        taller={selectedTaller}
+        onSuccess={() => loadTalleres(currentPage, pageSize)}
+      />
     </AdminLayout>
   )
 }

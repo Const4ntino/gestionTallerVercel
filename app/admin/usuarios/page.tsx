@@ -9,6 +9,7 @@ import { Plus, Edit, Trash2 } from "lucide-react"
 import { usuariosApi } from "@/lib/admin-api"
 import type { UsuarioResponse, PageResponse } from "@/types/admin"
 import { toast } from "sonner"
+import { UsuarioFormModal } from "@/components/admin/forms/usuario-form-modal"
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
@@ -16,6 +17,8 @@ export default function UsuariosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedUsuario, setSelectedUsuario] = useState<UsuarioResponse | null>(null)
 
   const loadUsuarios = async (page = 0, size = 10, search = "") => {
     try {
@@ -117,8 +120,8 @@ export default function UsuariosPage() {
         variant="outline"
         size="sm"
         onClick={() => {
-          // TODO: Implementar edición
-          toast.info("Función de edición próximamente")
+          setSelectedUsuario(usuario)
+          setModalOpen(true)
         }}
       >
         <Edit className="h-4 w-4" />
@@ -137,7 +140,12 @@ export default function UsuariosPage() {
             <h2 className="text-3xl font-bold tracking-tight">Usuarios</h2>
             <p className="text-muted-foreground">Gestiona todos los usuarios del sistema</p>
           </div>
-          <Button onClick={() => toast.info("Función de creación próximamente")}>
+          <Button
+            onClick={() => {
+              setSelectedUsuario(null)
+              setModalOpen(true)
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Usuario
           </Button>
@@ -157,6 +165,12 @@ export default function UsuariosPage() {
           actions={actions}
         />
       </div>
+      <UsuarioFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        usuario={selectedUsuario}
+        onSuccess={() => loadUsuarios(currentPage, pageSize)}
+      />
     </AdminLayout>
   )
 }

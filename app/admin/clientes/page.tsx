@@ -8,6 +8,7 @@ import { Plus, Edit, Trash2, Phone, MapPin } from "lucide-react"
 import { clientesApi } from "@/lib/admin-api"
 import type { ClienteResponse, PageResponse } from "@/types/admin"
 import { toast } from "sonner"
+import { ClienteFormModal } from "@/components/admin/forms/cliente-form-modal"
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
@@ -15,6 +16,8 @@ export default function ClientesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedCliente, setSelectedCliente] = useState<ClienteResponse | null>(null)
 
   const loadClientes = async (page = 0, size = 10, search = "") => {
     try {
@@ -122,7 +125,8 @@ export default function ClientesPage() {
         variant="outline"
         size="sm"
         onClick={() => {
-          toast.info("Función de edición próximamente")
+          setSelectedCliente(cliente)
+          setModalOpen(true)
         }}
       >
         <Edit className="h-4 w-4" />
@@ -141,7 +145,12 @@ export default function ClientesPage() {
             <h2 className="text-3xl font-bold tracking-tight">Clientes</h2>
             <p className="text-muted-foreground">Gestiona todos los clientes del sistema</p>
           </div>
-          <Button onClick={() => toast.info("Función de creación próximamente")}>
+          <Button
+            onClick={() => {
+              setSelectedCliente(null)
+              setModalOpen(true)
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Cliente
           </Button>
@@ -161,6 +170,12 @@ export default function ClientesPage() {
           actions={actions}
         />
       </div>
+      <ClienteFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        cliente={selectedCliente}
+        onSuccess={() => loadClientes(currentPage, pageSize)}
+      />
     </AdminLayout>
   )
 }

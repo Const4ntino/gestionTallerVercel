@@ -9,6 +9,7 @@ import { Plus, Edit, Trash2 } from "lucide-react"
 import { trabajadoresApi } from "@/lib/admin-api"
 import type { TrabajadorResponse, PageResponse } from "@/types/admin"
 import { toast } from "sonner"
+import { TrabajadorFormModal } from "@/components/admin/forms/trabajador-form-modal"
 
 export default function TrabajadoresPage() {
   const [trabajadores, setTrabajadores] = useState<TrabajadorResponse[]>([])
@@ -16,6 +17,8 @@ export default function TrabajadoresPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedTrabajador, setSelectedTrabajador] = useState<TrabajadorResponse | null>(null)
 
   const loadTrabajadores = async (page = 0, size = 10, search = "") => {
     try {
@@ -106,7 +109,8 @@ export default function TrabajadoresPage() {
         variant="outline"
         size="sm"
         onClick={() => {
-          toast.info("Función de edición próximamente")
+          setSelectedTrabajador(trabajador)
+          setModalOpen(true)
         }}
       >
         <Edit className="h-4 w-4" />
@@ -125,7 +129,12 @@ export default function TrabajadoresPage() {
             <h2 className="text-3xl font-bold tracking-tight">Trabajadores</h2>
             <p className="text-muted-foreground">Gestiona todos los trabajadores del sistema</p>
           </div>
-          <Button onClick={() => toast.info("Función de creación próximamente")}>
+          <Button
+            onClick={() => {
+              setSelectedTrabajador(null)
+              setModalOpen(true)
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Trabajador
           </Button>
@@ -145,6 +154,12 @@ export default function TrabajadoresPage() {
           actions={actions}
         />
       </div>
+      <TrabajadorFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        trabajador={selectedTrabajador}
+        onSuccess={() => loadTrabajadores(currentPage, pageSize)}
+      />
     </AdminLayout>
   )
 }
