@@ -54,7 +54,7 @@ export function MantenimientosPendientes() {
   const handleCreateFactura = async (mantenimiento: MantenimientoPendienteFacturar) => {
     try {
       setCalculatingTotal(true)
-      const total = await facturasApi.calculateTotal(mantenimiento.id)
+      const total = await facturasApi.calcularTotal(mantenimiento.id)
       setSelectedMantenimiento(mantenimiento)
       setCalculatedTotal(total)
       setModalOpen(true)
