@@ -151,12 +151,12 @@ export function MantenimientosPendientes() {
                   <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2">
                       <Car className="h-5 w-5" />
-                      {mantenimiento.vehiculo.marca} {mantenimiento.vehiculo.modelo}
-                      <Badge variant="outline">{mantenimiento.vehiculo.placa}</Badge>
+                      {mantenimiento.vehiculo?.marca || "N/A"} {mantenimiento.vehiculo?.modelo || "N/A"}
+                      <Badge variant="outline">{mantenimiento.vehiculo?.placa || "Sin placa"}</Badge>
                     </CardTitle>
                     <CardDescription className="flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      <span>{mantenimiento.vehiculo.cliente?.usuario?.nombreCompleto || "Cliente no disponible"}</span>
+                      <span>{mantenimiento.vehiculo?.cliente?.usuario?.nombreCompleto || "Cliente no disponible"}</span>
                     </CardDescription>
                   </div>
                   <Button onClick={() => handleFacturar(mantenimiento)}>
@@ -172,33 +172,35 @@ export function MantenimientosPendientes() {
                     <div className="flex items-center gap-2">
                       <Wrench className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Servicio:</span>
-                      <span>{mantenimiento.servicio.nombre}</span>
+                      <span>{mantenimiento.servicio?.nombre || "Sin servicio"}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Trabajador:</span>
                       <span>{mantenimiento.trabajador?.usuario?.nombreCompleto || "No asignado"}</span>
-                      <Badge variant="secondary">{mantenimiento.trabajador?.especialidad || "Sin especialidad"}</Badge>
+                      {mantenimiento.trabajador?.especialidad && (
+                        <Badge variant="secondary">{mantenimiento.trabajador.especialidad}</Badge>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Finalizado:</span>
-                      <span>{formatDate(mantenimiento.fechaFin)}</span>
+                      <span>{mantenimiento.fechaFin ? formatDate(mantenimiento.fechaFin) : "Sin fecha"}</span>
                     </div>
                   </div>
 
                   <div className="space-y-3">
                     <div>
                       <span className="font-medium">Taller:</span>
-                      <span className="ml-2">{mantenimiento.servicio.taller.nombre}</span>
+                      <span className="ml-2">{mantenimiento.servicio?.taller?.nombre || "Sin taller"}</span>
                     </div>
 
                     <div>
                       <span className="font-medium">Estado:</span>
                       <Badge className="ml-2" variant="default">
-                        {mantenimiento.estado}
+                        {mantenimiento.estado || "Sin estado"}
                       </Badge>
                     </div>
                   </div>
@@ -216,11 +218,11 @@ export function MantenimientosPendientes() {
                         {mantenimiento.productosUsados.map((producto, index) => (
                           <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded">
                             <div>
-                              <span className="font-medium">{producto.producto.nombre}</span>
-                              <span className="text-muted-foreground ml-2">x{producto.cantidadUsada}</span>
+                              <span className="font-medium">{producto.producto?.nombre || "Producto sin nombre"}</span>
+                              <span className="text-muted-foreground ml-2">x{producto.cantidadUsada || 0}</span>
                             </div>
                             <span className="font-medium">
-                              {formatCurrency(producto.precioEnUso * producto.cantidadUsada)}
+                              {formatCurrency((producto.precioEnUso || 0) * (producto.cantidadUsada || 0))}
                             </span>
                           </div>
                         ))}
