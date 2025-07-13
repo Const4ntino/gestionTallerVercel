@@ -43,10 +43,10 @@ export function ClienteFormModal({ open, onOpenChange, cliente, onSuccess }: Cli
       loadData()
       if (cliente) {
         setFormData({
-          usuarioId: cliente.usuario.id.toString(),
-          telefono: cliente.telefono,
-          direccion: cliente.direccion,
-          tallerAsignadoId: cliente.tallerAsignado.id.toString(),
+          usuarioId: cliente.usuario?.id?.toString() || "",
+          telefono: cliente.telefono || "",
+          direccion: cliente.direccion || "",
+          tallerAsignadoId: cliente.tallerAsignado?.id?.toString() || "",
         })
       } else {
         setFormData({
@@ -71,7 +71,7 @@ export function ClienteFormModal({ open, onOpenChange, cliente, onSuccess }: Cli
 
       // Si estamos editando, incluir el usuario actual
       if (cliente) {
-        usuariosSinCliente = usuariosResponse.content.filter((usuario) => usuario.id === cliente.usuario.id)
+        usuariosSinCliente = usuariosResponse.content.filter((usuario) => usuario.id === cliente.usuario?.id)
       }
 
       setUsuarios(usuariosSinCliente)
