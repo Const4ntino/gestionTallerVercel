@@ -191,6 +191,15 @@ export default function ProductosPage() {
       header: "Fecha Creación",
       render: (producto: ProductoResponse) => new Date(producto.fechaCreacion).toLocaleDateString(),
     },
+    {
+      key: "descripcion",
+      header: "Descripción",
+      render: (producto: ProductoResponse) => (
+        <span className="truncate max-w-[200px]" title={producto.descripcion}>
+          {producto.descripcion}
+        </span>
+      ),
+    },
   ]
 
   // Columnas para categorías

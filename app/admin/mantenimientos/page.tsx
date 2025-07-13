@@ -226,6 +226,15 @@ export default function MantenimientosPage() {
       header: "Fecha Creación",
       render: (mantenimiento: MantenimientoResponse) => new Date(mantenimiento.fechaCreacion).toLocaleDateString(),
     },
+    {
+      key: "descripcion",
+      header: "Descripción",
+      render: (mantenimiento: MantenimientoResponse) => (
+        <span className="truncate max-w-[200px]" title={mantenimiento.descripcion || ""}>
+          {mantenimiento.descripcion}
+        </span>
+      ),
+    },
   ]
 
   const actions = (mantenimiento: MantenimientoResponse) => (
