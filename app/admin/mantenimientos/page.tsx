@@ -6,7 +6,7 @@ import { DataTable } from "@/components/admin/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Edit, Trash2, Car, User, Settings, Calendar, LayoutDashboard, List } from "lucide-react"
+import { Plus, Edit, Trash2, LayoutDashboard, List } from "lucide-react"
 import {
   mantenimientosApi,
   vehiculosApi,
@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { MantenimientoFormModal } from "@/components/admin/forms/mantenimiento-form-modal"
 import { MantenimientosDashboard } from "@/components/admin/mantenimientos/mantenimientos-dashboard"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
+import { DetailsModal } from "@/components/admin/details-modal"
 
 interface FilterParams {
   search?: string
@@ -46,6 +47,9 @@ export default function MantenimientosPage() {
   const [vehiculos, setVehiculos] = useState<any[]>([])
   const [servicios, setServicios] = useState<any[]>([])
   const [trabajadores, setTrabajadores] = useState<any[]>([])
+
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [selectedMantenimientoDetails, setSelectedMantenimientoDetails] = useState<MantenimientoResponse | null>(null)
 
   useEffect(() => {
     loadAuxiliaryData()
@@ -173,12 +177,11 @@ export default function MantenimientosPage() {
       key: "vehiculo",
       header: "Vehículo",
       render: (mantenimiento: MantenimientoResponse) => (
-        <div className="flex items-center gap-1">
-          <Car className="h-3 w-3" />
-          <span className="font-medium">{mantenimiento.vehiculo.placa}</span>
-          <span className="text-muted-foreground text-xs">
+        <div className="min-w-[120px]">
+          <div className="font-medium">{mantenimiento.vehiculo.placa}</div>
+          <div className="text-xs text-muted-foreground">
             {mantenimiento.vehiculo.marca} {mantenimiento.vehiculo.modelo}
-          </span>
+          </div>
         </div>
       ),
     },
@@ -186,20 +189,9 @@ export default function MantenimientosPage() {
       key: "servicio.nombre",
       header: "Servicio",
       render: (mantenimiento: MantenimientoResponse) => (
-        <div className="flex items-center gap-1">
-          <Settings className="h-3 w-3" />
-          <span>{mantenimiento.servicio.nombre}</span>
-        </div>
-      ),
-    },
-    {
-      key: "trabajador",
-      header: "Trabajador",
-      render: (mantenimiento: MantenimientoResponse) => (
-        <div className="flex items-center gap-1">
-          <User className="h-3 w-3" />
-          <span>{mantenimiento.trabajador?.usuario.nombreCompleto || "Sin asignar"}</span>
-        </div>
+        <span className="truncate max-w-[150px] block" title={mantenimiento.servicio.nombre}>
+          {mantenimiento.servicio.nombre}
+        </span>
       ),
     },
     {
@@ -210,30 +202,9 @@ export default function MantenimientosPage() {
       ),
     },
     {
-      key: "fechaInicio",
-      header: "Fecha Inicio",
-      render: (mantenimiento: MantenimientoResponse) => (
-        <div className="flex items-center gap-1">
-          <Calendar className="h-3 w-3" />
-          <span>
-            {mantenimiento.fechaInicio ? new Date(mantenimiento.fechaInicio).toLocaleDateString() : "No programada"}
-          </span>
-        </div>
-      ),
-    },
-    {
       key: "fechaCreacion",
       header: "Fecha Creación",
       render: (mantenimiento: MantenimientoResponse) => new Date(mantenimiento.fechaCreacion).toLocaleDateString(),
-    },
-    {
-      key: "descripcion",
-      header: "Descripción",
-      render: (mantenimiento: MantenimientoResponse) => (
-        <span className="truncate max-w-[200px]" title={mantenimiento.descripcion || ""}>
-          {mantenimiento.descripcion}
-        </span>
-      ),
     },
   ]
 
@@ -269,6 +240,11 @@ export default function MantenimientosPage() {
 
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1)
+  }
+
+  const handleViewDetails = (mantenimiento: MantenimientoResponse) => {
+    setSelectedMantenimientoDetails(mantenimiento)
+    setDetailsModalOpen(true)
   }
 
   return (
@@ -338,6 +314,8 @@ export default function MantenimientosPage() {
               pageSize={pageSize}
               isLoading={isLoading}
               actions={actions}
+              showDetails={true}
+              onViewDetails={handleViewDetails}
             />
           </TabsContent>
         </Tabs>
@@ -351,6 +329,57 @@ export default function MantenimientosPage() {
           loadMantenimientos(currentPage, pageSize, currentFilters)
           handleRefresh()
         }}
+      />
+
+      <DetailsModal
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        title="Detalles del Mantenimiento"
+        description="Información completa del mantenimiento seleccionado"
+        fields={
+          selectedMantenimientoDetails
+            ? [
+                { label: "ID", value: selectedMantenimientoDetails.id },
+                {
+                  label: "Vehículo",
+                  value: `${selectedMantenimientoDetails.vehiculo.placa} - ${selectedMantenimientoDetails.vehiculo.marca} ${selectedMantenimientoDetails.vehiculo.modelo}`,
+                },
+                { label: "Cliente", value: selectedMantenimientoDetails.vehiculo.cliente.usuario.nombreCompleto },
+                { label: "Servicio", value: selectedMantenimientoDetails.servicio.nombre },
+                { label: "Taller", value: selectedMantenimientoDetails.servicio.taller.nombre },
+                {
+                  label: "Trabajador",
+                  value: selectedMantenimientoDetails.trabajador?.usuario.nombreCompleto || "Sin asignar",
+                },
+                { label: "Especialidad", value: selectedMantenimientoDetails.trabajador?.especialidad || "N/A" },
+                {
+                  label: "Estado",
+                  value: selectedMantenimientoDetails.estado,
+                  type: "badge",
+                  variant: getEstadoBadgeVariant(selectedMantenimientoDetails.estado),
+                },
+                { label: "Fecha de Inicio", value: selectedMantenimientoDetails.fechaInicio, type: "date" },
+                { label: "Fecha de Fin", value: selectedMantenimientoDetails.fechaFin, type: "date" },
+                {
+                  label: "Observaciones del Cliente",
+                  value: selectedMantenimientoDetails.observacionesCliente || "Sin observaciones",
+                },
+                {
+                  label: "Observaciones del Trabajador",
+                  value: selectedMantenimientoDetails.observacionesTrabajador || "Sin observaciones",
+                },
+                {
+                  label: "Productos Usados",
+                  value:
+                    selectedMantenimientoDetails.productosUsados.length > 0
+                      ? `${selectedMantenimientoDetails.productosUsados.length} productos`
+                      : "Sin productos",
+                },
+                { label: "Fecha de Creación", value: selectedMantenimientoDetails.fechaCreacion, type: "date" },
+                { label: "Última Actualización", value: selectedMantenimientoDetails.fechaActualizacion, type: "date" },
+              ]
+            : []
+        }
       />
     </AdminLayout>
   )

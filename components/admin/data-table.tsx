@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, Search, Eye } from "lucide-react"
 
 interface Column<T> {
   key: keyof T | string
@@ -26,6 +26,8 @@ interface DataTableProps<T> {
   pageSize?: number
   isLoading?: boolean
   actions?: (item: T) => React.ReactNode
+  showDetails?: boolean
+  onViewDetails?: (item: T) => void
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -40,6 +42,8 @@ export function DataTable<T extends Record<string, any>>({
   pageSize = 10,
   isLoading = false,
   actions,
+  showDetails,
+  onViewDetails,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -72,13 +76,13 @@ export function DataTable<T extends Record<string, any>>({
 
       {/* Table */}
       <div className="rounded-md border overflow-x-auto">
-        <Table>
+        <Table className="min-w-full">
           <TableHeader>
             <TableRow>
               {columns.map((column) => (
                 <TableHead key={column.key.toString()}>{column.header}</TableHead>
               ))}
-              {actions && <TableHead>Acciones</TableHead>}
+              {actions && <TableHead className="w-[120px]">Acciones</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -102,7 +106,23 @@ export function DataTable<T extends Record<string, any>>({
                       {column.render ? column.render(item) : getValue(item, column.key.toString())}
                     </TableCell>
                   ))}
-                  {actions && <TableCell>{actions(item)}</TableCell>}
+                  {actions && (
+                    <TableCell className="w-[120px]">
+                      <div className="flex gap-1">
+                        {showDetails && onViewDetails && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onViewDetails(item)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {actions(item)}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

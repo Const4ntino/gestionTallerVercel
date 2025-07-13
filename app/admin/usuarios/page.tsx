@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { UsuarioFormModal } from "@/components/admin/forms/usuario-form-modal"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
 import type { FilterParams } from "@/types/utils"
+import { DetailsModal } from "@/components/admin/details-modal"
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
@@ -22,6 +23,8 @@ export default function UsuariosPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedUsuario, setSelectedUsuario] = useState<UsuarioResponse | null>(null)
   const [currentFilters, setCurrentFilters] = useState<FilterParams>({})
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [selectedUsuarioDetails, setSelectedUsuarioDetails] = useState<UsuarioResponse | null>(null)
 
   const userFilters = [
     { key: "search", label: "Búsqueda General", type: "text" as const },
@@ -168,6 +171,11 @@ export default function UsuariosPage() {
     loadUsuarios(0, pageSize, {})
   }
 
+  const handleViewDetails = (usuario: UsuarioResponse) => {
+    setSelectedUsuarioDetails(usuario)
+    setDetailsModalOpen(true)
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -206,6 +214,8 @@ export default function UsuariosPage() {
           pageSize={pageSize}
           isLoading={isLoading}
           actions={actions}
+          showDetails={true}
+          onViewDetails={handleViewDetails}
         />
       </div>
       <UsuarioFormModal
@@ -213,6 +223,30 @@ export default function UsuariosPage() {
         onOpenChange={setModalOpen}
         usuario={selectedUsuario}
         onSuccess={() => loadUsuarios(currentPage, pageSize, currentFilters)}
+      />
+      <DetailsModal
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        title="Detalles del Usuario"
+        description="Información completa del usuario seleccionado"
+        fields={
+          selectedUsuarioDetails
+            ? [
+                { label: "ID", value: selectedUsuarioDetails.id },
+                { label: "Nombre Completo", value: selectedUsuarioDetails.nombreCompleto },
+                { label: "Usuario", value: selectedUsuarioDetails.username },
+                { label: "Correo Electrónico", value: selectedUsuarioDetails.correo },
+                {
+                  label: "Rol",
+                  value: selectedUsuarioDetails.rol,
+                  type: "badge",
+                  variant: getRoleBadgeVariant(selectedUsuarioDetails.rol),
+                },
+                { label: "Fecha de Creación", value: selectedUsuarioDetails.fechaCreacion, type: "date" },
+                { label: "Última Actualización", value: selectedUsuarioDetails.fechaActualizacion, type: "date" },
+              ]
+            : []
+        }
       />
     </AdminLayout>
   )

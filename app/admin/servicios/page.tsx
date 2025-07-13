@@ -5,13 +5,14 @@ import { AdminLayout } from "@/components/admin/admin-layout"
 import { DataTable } from "@/components/admin/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, DollarSign, Clock } from "lucide-react"
+import { Plus, Edit, Trash2, DollarSign, Clock, Eye } from "lucide-react"
 import { serviciosApi } from "@/lib/servicios-api"
 import { talleresApi } from "@/lib/admin-api"
 import type { ServicioResponse, PageResponse, TallerResponse } from "@/types/servicios"
 import { toast } from "sonner"
 import { ServicioFormModal } from "@/components/admin/forms/servicio-form-modal"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
+import { DetailsModal } from "@/components/admin/details-modal"
 
 interface FilterParams {
   search?: string
@@ -32,6 +33,8 @@ export default function ServiciosPage() {
   const [selectedServicio, setSelectedServicio] = useState<ServicioResponse | null>(null)
   const [currentFilters, setCurrentFilters] = useState<FilterParams>({})
   const [talleres, setTalleres] = useState<TallerResponse[]>([])
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [selectedServicioDetails, setSelectedServicioDetails] = useState<ServicioResponse | null>(null)
 
   useEffect(() => {
     loadTalleres()
@@ -134,7 +137,7 @@ export default function ServiciosPage() {
       key: "descripcion",
       header: "Descripción",
       render: (servicio: ServicioResponse) => (
-        <span className="truncate max-w-[200px]" title={servicio.descripcion}>
+        <span className="truncate max-w-[150px] block" title={servicio.descripcion}>
           {servicio.descripcion}
         </span>
       ),
@@ -183,6 +186,9 @@ export default function ServiciosPage() {
       <Button variant="outline" size="sm" onClick={() => handleDelete(servicio.id)}>
         <Trash2 className="h-4 w-4" />
       </Button>
+      <Button variant="outline" size="sm" onClick={() => handleViewDetails(servicio)}>
+        <Eye className="h-4 w-4" />
+      </Button>
     </div>
   )
 
@@ -196,6 +202,11 @@ export default function ServiciosPage() {
     setCurrentFilters({})
     setCurrentPage(0)
     loadServicios(0, pageSize, {})
+  }
+
+  const handleViewDetails = (servicio: ServicioResponse) => {
+    setSelectedServicioDetails(servicio)
+    setDetailsModalOpen(true)
   }
 
   return (
@@ -244,6 +255,8 @@ export default function ServiciosPage() {
           pageSize={pageSize}
           isLoading={isLoading}
           actions={actions}
+          showDetails={true}
+          onViewDetails={handleViewDetails}
         />
       </div>
       <ServicioFormModal
@@ -251,6 +264,27 @@ export default function ServiciosPage() {
         onOpenChange={setModalOpen}
         servicio={selectedServicio}
         onSuccess={() => loadServicios(currentPage, pageSize, currentFilters)}
+      />
+      <DetailsModal
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        title="Detalles del Servicio"
+        description="Información completa del servicio seleccionado"
+        fields={
+          selectedServicioDetails
+            ? [
+                { label: "ID", value: selectedServicioDetails.id },
+                { label: "Nombre", value: selectedServicioDetails.nombre },
+                { label: "Taller", value: selectedServicioDetails.taller.nombre },
+                { label: "Ciudad del Taller", value: selectedServicioDetails.taller.ciudad },
+                { label: "Descripción Completa", value: selectedServicioDetails.descripcion },
+                { label: "Precio Base", value: selectedServicioDetails.precioBase, type: "currency" },
+                { label: "Duración Estimada", value: `${selectedServicioDetails.duracionEstimadaHoras} horas` },
+                { label: "Fecha de Creación", value: selectedServicioDetails.fechaCreacion, type: "date" },
+                { label: "Última Actualización", value: selectedServicioDetails.fechaActualizacion, type: "date" },
+              ]
+            : []
+        }
       />
     </AdminLayout>
   )

@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import { ProductoFormModal } from "@/components/admin/forms/producto-form-modal"
 import { CategoriaFormModal } from "@/components/admin/forms/categoria-form-modal"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
+import { DetailsModal } from "@/components/admin/details-modal"
 
 export default function ProductosPage() {
   // Estados para productos
@@ -36,6 +37,12 @@ export default function ProductosPage() {
   const [categoriaModalOpen, setCategoriaModalOpen] = useState(false)
   const [selectedProducto, setSelectedProducto] = useState<ProductoResponse | null>(null)
   const [selectedCategoria, setSelectedCategoria] = useState<CategoriaProductoResponse | null>(null)
+
+  // Estados para detalles
+  const [productDetailsModalOpen, setProductDetailsModalOpen] = useState(false)
+  const [selectedProductDetails, setSelectedProductDetails] = useState<ProductoResponse | null>(null)
+  const [categoryDetailsModalOpen, setCategoryDetailsModalOpen] = useState(false)
+  const [selectedCategoryDetails, setSelectedCategoryDetails] = useState<CategoriaProductoResponse | null>(null)
 
   // Estados para datos auxiliares
   const [talleres, setTalleres] = useState<any[]>([])
@@ -162,7 +169,11 @@ export default function ProductosPage() {
   const productosColumns = [
     { key: "id", header: "ID" },
     { key: "nombre", header: "Nombre" },
-    { key: "categoria.nombre", header: "Categoría" },
+    {
+      key: "categoria.nombre",
+      header: "Categoría",
+      render: (producto: ProductoResponse) => <Badge variant="outline">{producto.categoria.nombre}</Badge>,
+    },
     { key: "taller.nombre", header: "Taller" },
     {
       key: "precio",
@@ -191,22 +202,21 @@ export default function ProductosPage() {
       header: "Fecha Creación",
       render: (producto: ProductoResponse) => new Date(producto.fechaCreacion).toLocaleDateString(),
     },
-    {
-      key: "descripcion",
-      header: "Descripción",
-      render: (producto: ProductoResponse) => (
-        <span className="truncate max-w-[200px]" title={producto.descripcion}>
-          {producto.descripcion}
-        </span>
-      ),
-    },
   ]
 
   // Columnas para categorías
   const categoriasColumns = [
     { key: "id", header: "ID" },
     { key: "nombre", header: "Nombre" },
-    { key: "descripcion", header: "Descripción" },
+    {
+      key: "descripcion",
+      header: "Descripción",
+      render: (categoria: CategoriaProductoResponse) => (
+        <span className="truncate max-w-[200px] block" title={categoria.descripcion}>
+          {categoria.descripcion}
+        </span>
+      ),
+    },
     {
       key: "fechaCreacion",
       header: "Fecha Creación",
@@ -251,6 +261,16 @@ export default function ProductosPage() {
       </Button>
     </div>
   )
+
+  const handleViewProductDetails = (producto: ProductoResponse) => {
+    setSelectedProductDetails(producto)
+    setProductDetailsModalOpen(true)
+  }
+
+  const handleViewCategoryDetails = (categoria: CategoriaProductoResponse) => {
+    setSelectedCategoryDetails(categoria)
+    setCategoryDetailsModalOpen(true)
+  }
 
   return (
     <AdminLayout>
@@ -325,6 +345,8 @@ export default function ProductosPage() {
               pageSize={productosPageSize}
               isLoading={productosLoading}
               actions={productosActions}
+              showDetails={true}
+              onViewDetails={handleViewProductDetails}
             />
           </TabsContent>
 
@@ -376,6 +398,8 @@ export default function ProductosPage() {
               pageSize={categoriasPageSize}
               isLoading={categoriasLoading}
               actions={categoriasActions}
+              showDetails={true}
+              onViewDetails={handleViewCategoryDetails}
             />
           </TabsContent>
         </Tabs>
@@ -400,6 +424,64 @@ export default function ProductosPage() {
           loadCategorias(categoriasPage, categoriasPageSize, categoriasFilters)
           loadAuxiliaryData()
         }}
+      />
+
+      {/* Modales de detalles */}
+      <DetailsModal
+        open={productDetailsModalOpen}
+        onOpenChange={setProductDetailsModalOpen}
+        title="Detalles del Producto"
+        description="Información completa del producto seleccionado"
+        fields={
+          selectedProductDetails
+            ? [
+                { label: "ID", value: selectedProductDetails.id },
+                { label: "Nombre", value: selectedProductDetails.nombre },
+                { label: "Taller", value: selectedProductDetails.taller.nombre },
+                { label: "Ciudad del Taller", value: selectedProductDetails.taller.ciudad },
+                {
+                  label: "Categoría",
+                  value: selectedProductDetails.categoria.nombre,
+                  type: "badge",
+                  variant: "outline",
+                },
+                { label: "Descripción Completa", value: selectedProductDetails.descripcion },
+                { label: "Precio", value: selectedProductDetails.precio, type: "currency" },
+                {
+                  label: "Stock",
+                  value: selectedProductDetails.stock,
+                  type: "badge",
+                  variant:
+                    selectedProductDetails.stock > 10
+                      ? "default"
+                      : selectedProductDetails.stock > 0
+                        ? "secondary"
+                        : "destructive",
+                },
+                { label: "URL de Imagen", value: selectedProductDetails.imageUrl || "No especificada" },
+                { label: "Fecha de Creación", value: selectedProductDetails.fechaCreacion, type: "date" },
+                { label: "Última Actualización", value: selectedProductDetails.fechaActualizacion, type: "date" },
+              ]
+            : []
+        }
+      />
+
+      <DetailsModal
+        open={categoryDetailsModalOpen}
+        onOpenChange={setCategoryDetailsModalOpen}
+        title="Detalles de la Categoría"
+        description="Información completa de la categoría seleccionada"
+        fields={
+          selectedCategoryDetails
+            ? [
+                { label: "ID", value: selectedCategoryDetails.id },
+                { label: "Nombre", value: selectedCategoryDetails.nombre },
+                { label: "Descripción Completa", value: selectedCategoryDetails.descripcion },
+                { label: "Fecha de Creación", value: selectedCategoryDetails.fechaCreacion, type: "date" },
+                { label: "Última Actualización", value: selectedCategoryDetails.fechaActualizacion, type: "date" },
+              ]
+            : []
+        }
       />
     </AdminLayout>
   )
