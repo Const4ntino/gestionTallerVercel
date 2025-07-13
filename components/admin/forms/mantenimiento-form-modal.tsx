@@ -1,22 +1,17 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Plus, Trash2 } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Plus, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import {
   mantenimientosApi,
   vehiculosApi,
@@ -24,17 +19,27 @@ import {
   trabajadoresMantenimientoApi,
   productosMantenimientoApi,
 } from "@/lib/mantenimientos-api"
-import type {
-  MantenimientoResponse,
-  MantenimientoRequest,
-  VehiculoResponse,
-  ServicioResponse,
-  TrabajadorResponse,
-  ProductoResponse,
-  MantenimientoEstado,
-  MantenimientoProductoRequest,
-} from "@/types/mantenimientos"
-import { toast } from "sonner"
+import type { MantenimientoResponse, MantenimientoEstado } from "@/types/mantenimientos"
+
+const mantenimientoSchema = z.object({
+  vehiculoId: z.number().min(1, "Debe seleccionar un vehículo"),
+  servicioId: z.number().min(1, "Debe seleccionar un servicio"),
+  trabajadorId: z.number().optional(),
+  estado: z.enum(["SOLICITADO", "PENDIENTE", "EN_PROCESO", "COMPLETADO", "CANCELADO"]),
+  observacionesCliente: z.string().optional(),
+  observacionesTrabajador: z.string().optional(),
+  productosUsados: z
+    .array(
+      z.object({
+        productoId: z.number(),
+        cantidadUsada: z.number().min(1),
+        precioEnUso: z.number().min(0),
+      }),
+    )
+    .optional(),
+})
+
+type MantenimientoFormData = z.infer<typeof mantenimientoSchema>
 
 interface MantenimientoFormModalProps {
   open: boolean
@@ -45,181 +50,172 @@ interface MantenimientoFormModalProps {
 
 export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSuccess }: MantenimientoFormModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
-  const [servicios, setServicios] = useState<ServicioResponse[]>([])
-  const [trabajadores, setTrabajadores] = useState<TrabajadorResponse[]>([])
-  const [productos, setProductos] = useState<ProductoResponse[]>([])
-  const [selectedTallerId, setSelectedTallerId] = useState<number | null>(null)
+  const [vehiculos, setVehiculos] = useState<any[]>([])
+  const [servicios, setServicios] = useState<any[]>([])
+  const [trabajadores, setTrabajadores] = useState<any[]>([])
+  const [productos, setProductos] = useState<any[]>([])
+  const [productosUsados, setProductosUsados] = useState<
+    Array<{ productoId: number; cantidadUsada: number; precioEnUso: number }>
+  >([])
 
-  const [formData, setFormData] = useState({
-    vehiculoId: "",
-    servicioId: "",
-    trabajadorId: "",
-    estado: "SOLICITADO" as MantenimientoEstado,
-    observacionesCliente: "",
-    observacionesTrabajador: "",
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<MantenimientoFormData>({
+    resolver: zodResolver(mantenimientoSchema),
+    defaultValues: {
+      estado: "SOLICITADO",
+      productosUsados: [],
+    },
   })
-
-  const [productosUsados, setProductosUsados] = useState<MantenimientoProductoRequest[]>([])
 
   useEffect(() => {
     if (open) {
       loadData()
-      if (mantenimiento) {
-        setFormData({
-          vehiculoId: mantenimiento.vehiculo.id.toString(),
-          servicioId: mantenimiento.servicio.id.toString(),
-          trabajadorId: mantenimiento.trabajador?.id?.toString() || "",
-          estado: mantenimiento.estado,
-          observacionesCliente: mantenimiento.observacionesCliente || "",
-          observacionesTrabajador: mantenimiento.observacionesTrabajador || "",
-        })
-        setProductosUsados(
-          mantenimiento.productosUsados.map((p) => ({
-            productoId: p.producto.id,
-            cantidadUsada: p.cantidadUsada,
-            precioEnUso: p.precioEnUso,
-          })),
-        )
-        setSelectedTallerId(mantenimiento.servicio.taller.id)
-      } else {
-        setFormData({
-          vehiculoId: "",
-          servicioId: "",
-          trabajadorId: "",
-          estado: "SOLICITADO",
-          observacionesCliente: "",
-          observacionesTrabajador: "",
-        })
-        setProductosUsados([])
-        setSelectedTallerId(null)
-      }
     }
-  }, [open, mantenimiento])
+  }, [open])
+
+  useEffect(() => {
+    if (mantenimiento) {
+      setValue("vehiculoId", mantenimiento.vehiculo.id)
+      setValue("servicioId", mantenimiento.servicio.id)
+      setValue("trabajadorId", mantenimiento.trabajador?.id)
+      setValue("estado", mantenimiento.estado)
+      setValue("observacionesCliente", mantenimiento.observacionesCliente || "")
+      setValue("observacionesTrabajador", mantenimiento.observacionesTrabajador || "")
+
+      const productosFormateados = mantenimiento.productosUsados.map((p) => ({
+        productoId: p.producto.id,
+        cantidadUsada: p.cantidadUsada,
+        precioEnUso: p.precioEnUso,
+      }))
+      setProductosUsados(productosFormateados)
+      setValue("productosUsados", productosFormateados)
+    } else {
+      reset({
+        estado: "SOLICITADO",
+        productosUsados: [],
+      })
+      setProductosUsados([])
+    }
+  }, [mantenimiento, setValue, reset])
 
   const loadData = async () => {
     try {
-      const [vehiculosResponse, serviciosResponse, trabajadoresResponse] = await Promise.all([
+      const [vehiculosData, serviciosData, trabajadoresData, productosData] = await Promise.all([
         vehiculosApi.getAll(),
         serviciosMantenimientoApi.getAll(),
         trabajadoresMantenimientoApi.getAll(),
+        productosMantenimientoApi.getAll(),
       ])
 
-      setVehiculos(vehiculosResponse)
-      setServicios(serviciosResponse)
-      setTrabajadores(trabajadoresResponse)
+      setVehiculos(vehiculosData)
+      setServicios(serviciosData)
+      setTrabajadores(trabajadoresData)
+      setProductos(productosData)
     } catch (error) {
-      console.error("Error al cargar datos:", error)
-      toast.error("Error al cargar los datos del formulario")
+      toast.error("Error al cargar datos")
+      console.error(error)
     }
   }
 
-  const loadProductosPorTaller = async (tallerId: number) => {
+  const agregarProducto = () => {
+    const nuevosProductos = [...productosUsados, { productoId: 0, cantidadUsada: 1, precioEnUso: 0 }]
+    setProductosUsados(nuevosProductos)
+    setValue("productosUsados", nuevosProductos)
+  }
+
+  const eliminarProducto = (index: number) => {
+    const nuevosProductos = productosUsados.filter((_, i) => i !== index)
+    setProductosUsados(nuevosProductos)
+    setValue("productosUsados", nuevosProductos)
+  }
+
+  const actualizarProducto = (index: number, campo: string, valor: any) => {
+    const nuevosProductos = [...productosUsados]
+    nuevosProductos[index] = { ...nuevosProductos[index], [campo]: valor }
+    setProductosUsados(nuevosProductos)
+    setValue("productosUsados", nuevosProductos)
+  }
+
+  const onSubmit = async (data: MantenimientoFormData) => {
     try {
-      const productosResponse = await productosMantenimientoApi.filterByTaller(tallerId)
-      setProductos(productosResponse)
-    } catch (error) {
-      console.error("Error al cargar productos:", error)
-      toast.error("Error al cargar productos del taller")
-    }
-  }
+      setIsLoading(true)
 
-  const handleServicioChange = (servicioId: string) => {
-    setFormData((prev) => ({ ...prev, servicioId }))
-
-    const servicio = servicios.find((s) => s.id.toString() === servicioId)
-    if (servicio) {
-      setSelectedTallerId(servicio.taller.id)
-      loadProductosPorTaller(servicio.taller.id)
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      const data: MantenimientoRequest = {
-        vehiculoId: Number.parseInt(formData.vehiculoId),
-        servicioId: Number.parseInt(formData.servicioId),
-        trabajadorId: formData.trabajadorId ? Number.parseInt(formData.trabajadorId) : null,
-        estado: formData.estado,
-        observacionesCliente: formData.observacionesCliente || null,
-        observacionesTrabajador: formData.observacionesTrabajador || null,
-        productosUsados: productosUsados.length > 0 ? productosUsados : undefined,
+      const payload = {
+        vehiculoId: data.vehiculoId,
+        servicioId: data.servicioId,
+        trabajadorId: data.trabajadorId || null,
+        estado: data.estado,
+        observacionesCliente: data.observacionesCliente || "",
+        observacionesTrabajador: data.observacionesTrabajador || "",
+        productosUsados: productosUsados.filter((p) => p.productoId > 0),
       }
 
       if (mantenimiento) {
-        await mantenimientosApi.update(mantenimiento.id, data)
+        await mantenimientosApi.update(mantenimiento.id, payload)
         toast.success("Mantenimiento actualizado correctamente")
       } else {
-        await mantenimientosApi.create(data)
+        await mantenimientosApi.create(payload)
         toast.success("Mantenimiento creado correctamente")
       }
 
       onSuccess()
       onOpenChange(false)
+      reset()
+      setProductosUsados([])
     } catch (error) {
-      toast.error(mantenimiento ? "Error al actualizar mantenimiento" : "Error al crear mantenimiento")
+      toast.error("Error al guardar el mantenimiento")
       console.error(error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const agregarProducto = () => {
-    setProductosUsados((prev) => [...prev, { productoId: 0, cantidadUsada: 1, precioEnUso: 0 }])
-  }
-
-  const eliminarProducto = (index: number) => {
-    setProductosUsados((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  const actualizarProducto = (index: number, field: keyof MantenimientoProductoRequest, value: number) => {
-    setProductosUsados((prev) => prev.map((producto, i) => (i === index ? { ...producto, [field]: value } : producto)))
-  }
-
-  const estadosPermitidos = mantenimiento
-    ? ["SOLICITADO", "PENDIENTE", "EN_PROCESO", "COMPLETADO", "CANCELADO"]
-    : ["SOLICITADO", "PENDIENTE", "EN_PROCESO"]
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mantenimiento ? "Editar Mantenimiento" : "Crear Nuevo Mantenimiento"}</DialogTitle>
-          <DialogDescription>
-            {mantenimiento
-              ? "Modifica los datos del mantenimiento."
-              : "Completa los datos para crear un nuevo mantenimiento."}
-          </DialogDescription>
+          <p className="text-sm text-muted-foreground">
+            Completa los datos para {mantenimiento ? "actualizar" : "crear"} un mantenimiento.
+          </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Vehículo */}
             <div className="space-y-2">
               <Label htmlFor="vehiculoId">Vehículo</Label>
-              <Select value={formData.vehiculoId} onValueChange={(value) => handleChange("vehiculoId", value)} required>
+              <Select
+                value={watch("vehiculoId")?.toString() || "0"}
+                onValueChange={(value) => setValue("vehiculoId", Number.parseInt(value))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un vehículo" />
                 </SelectTrigger>
                 <SelectContent>
                   {vehiculos.map((vehiculo) => (
                     <SelectItem key={vehiculo.id} value={vehiculo.id.toString()}>
-                      {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo} ({vehiculo.cliente.usuario.nombreCompleto})
+                      {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {errors.vehiculoId && <p className="text-sm text-red-500">{errors.vehiculoId.message}</p>}
             </div>
 
+            {/* Servicio */}
             <div className="space-y-2">
               <Label htmlFor="servicioId">Servicio</Label>
-              <Select value={formData.servicioId} onValueChange={handleServicioChange} required>
+              <Select
+                value={watch("servicioId")?.toString() || "0"}
+                onValueChange={(value) => setValue("servicioId", Number.parseInt(value))}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un servicio" />
                 </SelectTrigger>
@@ -231,13 +227,16 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                   ))}
                 </SelectContent>
               </Select>
+              {errors.servicioId && <p className="text-sm text-red-500">{errors.servicioId.message}</p>}
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
+            {/* Trabajador */}
             <div className="space-y-2">
               <Label htmlFor="trabajadorId">Trabajador (Opcional)</Label>
-              <Select value={formData.trabajadorId} onValueChange={(value) => handleChange("trabajadorId", value)}>
+              <Select
+                value={watch("trabajadorId")?.toString() || "0"}
+                onValueChange={(value) => setValue("trabajadorId", value ? Number.parseInt(value) : undefined)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un trabajador" />
                 </SelectTrigger>
@@ -252,42 +251,45 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
               </Select>
             </div>
 
+            {/* Estado */}
             <div className="space-y-2">
               <Label htmlFor="estado">Estado</Label>
-              <Select value={formData.estado} onValueChange={(value) => handleChange("estado", value)} required>
+              <Select
+                value={watch("estado")}
+                onValueChange={(value) => setValue("estado", value as MantenimientoEstado)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  {estadosPermitidos.map((estado) => (
-                    <SelectItem key={estado} value={estado}>
-                      {estado}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="SOLICITADO">SOLICITADO</SelectItem>
+                  <SelectItem value="PENDIENTE">PENDIENTE</SelectItem>
+                  <SelectItem value="EN_PROCESO">EN_PROCESO</SelectItem>
+                  <SelectItem value="COMPLETADO">COMPLETADO</SelectItem>
+                  <SelectItem value="CANCELADO">CANCELADO</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.estado && <p className="text-sm text-red-500">{errors.estado.message}</p>}
             </div>
           </div>
 
+          {/* Observaciones del Cliente */}
           <div className="space-y-2">
             <Label htmlFor="observacionesCliente">Observaciones del Cliente</Label>
             <Textarea
-              id="observacionesCliente"
-              value={formData.observacionesCliente}
-              onChange={(e) => handleChange("observacionesCliente", e.target.value)}
+              {...register("observacionesCliente")}
               placeholder="Observaciones o comentarios del cliente"
-              rows={2}
+              rows={3}
             />
           </div>
 
+          {/* Observaciones del Trabajador */}
           <div className="space-y-2">
             <Label htmlFor="observacionesTrabajador">Observaciones del Trabajador</Label>
             <Textarea
-              id="observacionesTrabajador"
-              value={formData.observacionesTrabajador}
-              onChange={(e) => handleChange("observacionesTrabajador", e.target.value)}
+              {...register("observacionesTrabajador")}
               placeholder="Observaciones técnicas del trabajador"
-              rows={2}
+              rows={3}
             />
           </div>
 
@@ -295,33 +297,27 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Productos Usados</Label>
-              <Button type="button" variant="outline" size="sm" onClick={agregarProducto} disabled={!selectedTallerId}>
-                <Plus className="mr-2 h-4 w-4" />
+              <Button type="button" variant="outline" size="sm" onClick={agregarProducto}>
+                <Plus className="h-4 w-4 mr-2" />
                 Agregar Producto
               </Button>
             </div>
 
             {productosUsados.map((producto, index) => (
-              <div key={index} className="grid grid-cols-4 gap-2 items-end p-3 border rounded">
+              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
                 <div className="space-y-2">
                   <Label>Producto</Label>
                   <Select
                     value={producto.productoId.toString()}
-                    onValueChange={(value) => {
-                      const selectedProduct = productos.find((p) => p.id.toString() === value)
-                      actualizarProducto(index, "productoId", Number.parseInt(value))
-                      if (selectedProduct) {
-                        actualizarProducto(index, "precioEnUso", selectedProduct.precio)
-                      }
-                    }}
+                    onValueChange={(value) => actualizarProducto(index, "productoId", Number.parseInt(value))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar" />
+                      <SelectValue placeholder="Selecciona producto" />
                     </SelectTrigger>
                     <SelectContent>
                       {productos.map((prod) => (
                         <SelectItem key={prod.id} value={prod.id.toString()}>
-                          {prod.nombre} - ${prod.precio}
+                          {prod.nombre}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -339,44 +335,33 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Precio Unitario</Label>
+                  <Label>Precio</Label>
                   <Input
                     type="number"
-                    step="0.01"
                     min="0"
+                    step="0.01"
                     value={producto.precioEnUso}
                     onChange={(e) => actualizarProducto(index, "precioEnUso", Number.parseFloat(e.target.value))}
                   />
                 </div>
 
-                <Button type="button" variant="outline" size="sm" onClick={() => eliminarProducto(index)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-end">
+                  <Button type="button" variant="outline" size="sm" onClick={() => eliminarProducto(index)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
-
-            {selectedTallerId && productos.length === 0 && (
-              <p className="text-sm text-muted-foreground">No hay productos disponibles para este taller.</p>
-            )}
           </div>
 
-          <DialogFooter>
+          <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {mantenimiento ? "Actualizando..." : "Creando..."}
-                </>
-              ) : mantenimiento ? (
-                "Actualizar"
-              ) : (
-                "Crear"
-              )}
+              {isLoading ? "Guardando..." : mantenimiento ? "Actualizar" : "Crear"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

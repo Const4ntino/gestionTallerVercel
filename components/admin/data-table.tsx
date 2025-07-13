@@ -1,252 +1,210 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight, Edit, Trash2, Eye } from "lucide-react"
+import { ChevronLeft, ChevronRight, Search, Eye } from "lucide-react"
 
-interface Column {
-  key: string
-  label: string
-  sortable?: boolean
-  className?: string
+interface Column<T> {
+  key: keyof T | string
+  header: string
+  render?: (item: T) => React.ReactNode
 }
 
-interface DataTableProps {
-  columns: Column[]
-  data: any[]
-  onEdit?: (item: any) => void
-  onDelete?: (item: any) => void
-  onViewDetails?: (item: any) => void
-  showDetails?: boolean
-  currentPage?: number
-  totalPages?: number
-  pageSize?: number
-  totalItems?: number
-  onPageChange?: (page: number) => void
+interface DataTableProps<T> {
+  data: T[]
+  columns: Column<T>[]
+  totalPages: number
+  currentPage: number
+  totalElements: number
+  onPageChange: (page: number) => void
+  onSearch?: (search: string) => void
   onPageSizeChange?: (size: number) => void
+  pageSize?: number
   isLoading?: boolean
+  actions?: (item: T) => React.ReactNode
+  showDetails?: boolean
+  onViewDetails?: (item: T) => void
 }
 
-export function DataTable({
-  columns,
+export function DataTable<T extends Record<string, any>>({
   data,
-  onEdit,
-  onDelete,
-  onViewDetails,
-  showDetails = false,
-  currentPage = 1,
-  totalPages = 1,
-  pageSize = 10,
-  totalItems = 0,
+  columns,
+  totalPages,
+  currentPage,
+  totalElements,
   onPageChange,
+  onSearch,
   onPageSizeChange,
+  pageSize = 10,
   isLoading = false,
-}: DataTableProps) {
-  const [sortColumn, setSortColumn] = useState<string | null>(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
+  actions,
+  showDetails,
+  onViewDetails,
+}: DataTableProps<T>) {
+  const [searchTerm, setSearchTerm] = useState("")
 
-  const handleSort = (columnKey: string) => {
-    if (sortColumn === columnKey) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortColumn(columnKey)
-      setSortDirection("asc")
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (onSearch) {
+      onSearch(searchTerm)
     }
   }
 
-  const renderCellValue = (item: any, column: Column) => {
-    const value = item[column.key]
-
-    if (value === null || value === undefined) {
-      return "N/A"
-    }
-
-    if (typeof value === "object" && value !== null) {
-      return JSON.stringify(value)
-    }
-
-    return String(value)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-md border">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {columns.map((column) => (
-                    <TableHead key={column.key} className={column.className}>
-                      {column.label}
-                    </TableHead>
-                  ))}
-                  <TableHead className="w-[120px]">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={index}>
-                    {columns.map((column) => (
-                      <TableCell key={column.key}>
-                        <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                        <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      </div>
-    )
+  const getValue = (item: T, key: string): any => {
+    return key.split(".").reduce((obj, k) => obj?.[k], item)
   }
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+      {/* Search and filters */}
+      {onSearch && (
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          <Button type="submit">Buscar</Button>
+        </form>
+      )}
+
+      {/* Table */}
+      <div className="rounded-md border overflow-x-auto">
+        <Table className="min-w-full">
+          <TableHeader>
+            <TableRow>
+              {columns.map((column) => (
+                <TableHead key={column.key.toString()}>{column.header}</TableHead>
+              ))}
+              {(actions || showDetails) && <TableHead className="w-[150px]">Acciones</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
               <TableRow>
-                {columns.map((column) => (
-                  <TableHead
-                    key={column.key}
-                    className={`${column.className || ""} ${column.sortable ? "cursor-pointer hover:bg-muted/50" : ""}`}
-                    onClick={() => column.sortable && handleSort(column.key)}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>{column.label}</span>
-                      {column.sortable && sortColumn === column.key && (
-                        <span className="text-xs">{sortDirection === "asc" ? "↑" : "↓"}</span>
-                      )}
-                    </div>
-                  </TableHead>
-                ))}
-                <TableHead className="w-[150px]">Acciones</TableHead>
+                <TableCell colSpan={columns.length + (actions || showDetails ? 1 : 0)} className="h-24 text-center">
+                  Cargando...
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length + 1} className="text-center py-8 text-muted-foreground">
-                    No se encontraron resultados
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.map((item, index) => (
-                  <TableRow key={item.id || index}>
-                    {columns.map((column) => (
-                      <TableCell key={column.key} className={column.className}>
-                        {renderCellValue(item, column)}
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      <div className="flex space-x-2">
+            ) : data.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={columns.length + (actions || showDetails ? 1 : 0)} className="h-24 text-center">
+                  No se encontraron resultados.
+                </TableCell>
+              </TableRow>
+            ) : (
+              data.map((item, index) => (
+                <TableRow key={index}>
+                  {columns.map((column) => (
+                    <TableCell key={column.key.toString()}>
+                      {column.render ? column.render(item) : getValue(item, column.key.toString())}
+                    </TableCell>
+                  ))}
+                  {(actions || showDetails) && (
+                    <TableCell className="w-[150px]">
+                      <div className="flex gap-1">
                         {showDetails && onViewDetails && (
-                          <Button variant="ghost" size="sm" onClick={() => onViewDetails(item)} title="Ver detalles">
-                            <Eye className="h-4 w-4" />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onViewDetails(item)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Eye className="h-3 w-3" />
                           </Button>
                         )}
-                        {onEdit && (
-                          <Button variant="ghost" size="sm" onClick={() => onEdit(item)} title="Editar">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {onDelete && (
-                          <Button variant="ghost" size="sm" onClick={() => onDelete(item)} title="Eliminar">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        {actions && actions(item)}
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                  )}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Paginación */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm text-muted-foreground">
-              Mostrando {Math.min((currentPage - 1) * pageSize + 1, totalItems)} a{" "}
-              {Math.min(currentPage * pageSize, totalItems)} de {totalItems} resultados
-            </p>
-            <Select value={pageSize.toString()} onValueChange={(value) => onPageSizeChange?.(Number.parseInt(value))}>
-              <SelectTrigger className="w-[70px]">
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {Math.min(currentPage * pageSize + 1, totalElements)} a{" "}
+            {Math.min((currentPage + 1) * pageSize, totalElements)} de {totalElements} resultados
+          </p>
+          {onPageSizeChange && (
+            <Select value={pageSize.toString()} onValueChange={(value) => onPageSizeChange(Number.parseInt(value))}>
+              <SelectTrigger className="h-8 w-[70px]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((size) => (
+                  <SelectItem key={size} value={size.toString()}>
+                    {size}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange?.(currentPage - 1)}
-              disabled={currentPage <= 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Anterior
-            </Button>
-
-            <div className="flex items-center space-x-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNumber
-                if (totalPages <= 5) {
-                  pageNumber = i + 1
-                } else if (currentPage <= 3) {
-                  pageNumber = i + 1
-                } else if (currentPage >= totalPages - 2) {
-                  pageNumber = totalPages - 4 + i
-                } else {
-                  pageNumber = currentPage - 2 + i
-                }
-
-                return (
-                  <Button
-                    key={pageNumber}
-                    variant={currentPage === pageNumber ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => onPageChange?.(pageNumber)}
-                    className="w-8 h-8 p-0"
-                  >
-                    {pageNumber}
-                  </Button>
-                )
-              })}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange?.(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-            >
-              Siguiente
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          )}
         </div>
-      )}
+
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 0}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Anterior
+          </Button>
+
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum = i
+              if (totalPages > 5) {
+                if (currentPage < 2) {
+                  pageNum = i
+                } else if (currentPage > totalPages - 3) {
+                  pageNum = totalPages - 5 + i
+                } else {
+                  pageNum = currentPage - 2 + i
+                }
+              }
+
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onPageChange(pageNum)}
+                  className="w-8 h-8 p-0"
+                >
+                  {pageNum + 1}
+                </Button>
+              )
+            })}
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages - 1}
+          >
+            Siguiente
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
