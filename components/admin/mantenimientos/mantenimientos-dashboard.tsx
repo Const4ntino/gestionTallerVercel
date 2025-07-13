@@ -8,7 +8,6 @@ import { Clock, AlertCircle, Play, CheckCircle, XCircle, Calendar, User, Car, Se
 import { mantenimientosApi } from "@/lib/mantenimientos-api"
 import type { MantenimientoResponse, MantenimientoStats, MantenimientoEstado } from "@/types/mantenimientos"
 import { toast } from "sonner"
-import { formatDateTime, getElapsedTime } from "@/lib/utils" // Importar las nuevas utilidades
 
 interface MantenimientosDashboardProps {
   onRefresh: () => void
@@ -25,27 +24,18 @@ export function MantenimientosDashboard({ onRefresh }: MantenimientosDashboardPr
     total: 0,
   })
   const [isLoading, setIsLoading] = useState(true)
-  const [elapsedTimes, setElapsedTimes] = useState<{ [key: number]: string }>({})
+  const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
     loadData()
-  }, [])
 
-  useEffect(() => {
+    // Actualizar el tiempo cada segundo para el contador en tiempo real
     const interval = setInterval(() => {
-      setElapsedTimes((prevTimes) => {
-        const newTimes = { ...prevTimes }
-        mantenimientos.forEach((mantenimiento) => {
-          if (mantenimiento.estado === "EN_PROCESO" && mantenimiento.fechaInicio) {
-            newTimes[mantenimiento.id] = getElapsedTime(mantenimiento.fechaInicio)
-          }
-        })
-        return newTimes
-      })
-    }, 1000) // Actualizar cada segundo
+      setCurrentTime(new Date())
+    }, 1000)
 
     return () => clearInterval(interval)
-  }, [mantenimientos]) // Depende de los mantenimientos para recalcular los tiempos
+  }, [])
 
   const loadData = async () => {
     try {
@@ -80,20 +70,45 @@ export function MantenimientosDashboard({ onRefresh }: MantenimientosDashboardPr
       )
 
       setStats(newStats)
-
-      // Inicializar tiempos transcurridos
-      const initialElapsedTimes: { [key: number]: string } = {}
-      data.forEach((mantenimiento) => {
-        if (mantenimiento.estado === "EN_PROCESO" && mantenimiento.fechaInicio) {
-          initialElapsedTimes[mantenimiento.id] = getElapsedTime(mantenimiento.fechaInicio)
-        }
-      })
-      setElapsedTimes(initialElapsedTimes)
     } catch (error) {
       toast.error("Error al cargar datos del dashboard")
       console.error(error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return "N/A"
+    const date = new Date(dateString)
+    return date.toLocaleString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  const calculateElapsedTime = (startDate: string | null) => {
+    if (!startDate) return "N/A"
+
+    const start = new Date(startDate)
+    const now = currentTime
+    const diffMs = now.getTime() - start.getTime()
+
+    if (diffMs < 0) return "N/A"
+
+    const hours = Math.floor(diffMs / (1000 * 60 * 60))
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000)
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`
+    } else {
+      return `${seconds}s`
     }
   }
 
@@ -157,9 +172,6 @@ export function MantenimientosDashboard({ onRefresh }: MantenimientosDashboardPr
         servicioId: mantenimiento.servicio.id,
         trabajadorId: mantenimiento.trabajador?.id || null,
         estado: nuevoEstado,
-        // No enviar fechaInicio y fechaFin si el backend las maneja automáticamente
-        // fechaInicio: mantenimiento.fechaInicio,
-        // fechaFin: nuevoEstado === "COMPLETADO" ? new Date().toISOString() : mantenimiento.fechaFin,
         observacionesCliente: mantenimiento.observacionesCliente,
         observacionesTrabajador: mantenimiento.observacionesTrabajador,
         productosUsados: mantenimiento.productosUsados.map((p) => ({
@@ -297,36 +309,45 @@ export function MantenimientosDashboard({ onRefresh }: MantenimientosDashboardPr
                         </div>
                       )}
 
-                      {mantenimiento.fechaInicio && (
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          <span>Inicio: {formatDateTime(mantenimiento.fechaInicio)}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>{formatDateTime(mantenimiento.fechaCreacion)}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {mantenimiento.estado === "EN_PROCESO" && mantenimiento.fechaInicio && (
-                    <div className="flex items-center space-x-2 text-sm text-blue-500 font-medium">
-                      <Timer className="h-4 w-4" />
-                      <span>Tiempo transcurrido: {elapsedTimes[mantenimiento.id] || "Calculando..."}</span>
-                    </div>
-                  )}
+                  {/* Información de fecha de inicio y tiempo transcurrido */}
+                  <div className="flex flex-col items-end space-y-2 min-w-[200px]">
+                    {mantenimiento.fechaInicio && (
+                      <div className="text-sm">
+                        <div className="flex items-center space-x-2 text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>Inicio: {formatDateTime(mantenimiento.fechaInicio)}</span>
+                        </div>
+                        {mantenimiento.estado === "EN_PROCESO" && (
+                          <div className="flex items-center space-x-2 text-blue-600 font-medium mt-1">
+                            <Timer className="h-3 w-3" />
+                            <span>Transcurrido: {calculateElapsedTime(mantenimiento.fechaInicio)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                  <div className="flex space-x-2">
-                    {getTransicionesPermitidas(mantenimiento.estado).map((nuevoEstado) => (
-                      <Button
-                        key={nuevoEstado}
-                        size="sm"
-                        variant={nuevoEstado === "CANCELADO" ? "destructive" : "default"}
-                        onClick={() => handleCambiarEstado(mantenimiento.id, nuevoEstado)}
-                      >
-                        {nuevoEstado === "PENDIENTE" && "Aceptar"}
-                        {nuevoEstado === "EN_PROCESO" && "Iniciar"}
-                        {nuevoEstado === "COMPLETADO" && "Completar"}
-                        {nuevoEstado === "CANCELADO" && "Cancelar"}
-                      </Button>
-                    ))}
+                    <div className="flex space-x-2">
+                      {getTransicionesPermitidas(mantenimiento.estado).map((nuevoEstado) => (
+                        <Button
+                          key={nuevoEstado}
+                          size="sm"
+                          variant={nuevoEstado === "CANCELADO" ? "destructive" : "default"}
+                          onClick={() => handleCambiarEstado(mantenimiento.id, nuevoEstado)}
+                        >
+                          {nuevoEstado === "PENDIENTE" && "Aceptar"}
+                          {nuevoEstado === "EN_PROCESO" && "Iniciar"}
+                          {nuevoEstado === "COMPLETADO" && "Completar"}
+                          {nuevoEstado === "CANCELADO" && "Cancelar"}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}

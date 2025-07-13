@@ -1,27 +1,26 @@
 "use client"
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 
 interface DetailField {
   label: string
   value: any
-  type?: "text" | "badge" | "date" | "currency"
+  type?: "text" | "badge" | "date" | "currency" | "list"
   variant?: "default" | "secondary" | "destructive" | "outline"
 }
 
 interface DetailsModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  isOpen: boolean
+  onClose: () => void
   title: string
-  description?: string
-  fields: DetailField[]
+  data: DetailField[]
 }
 
-export function DetailsModal({ open, onOpenChange, title, description, fields }: DetailsModalProps) {
+export function DetailsModal({ isOpen, onClose, title, data }: DetailsModalProps) {
   const formatValue = (field: DetailField) => {
-    if (!field.value || field.value === "null" || field.value === null) {
+    if (field.value === null || field.value === undefined) {
       return "N/A"
     }
 
@@ -29,41 +28,33 @@ export function DetailsModal({ open, onOpenChange, title, description, fields }:
       case "badge":
         return <Badge variant={field.variant || "default"}>{field.value}</Badge>
       case "date":
-        if (typeof field.value === "string" && field.value.includes("T")) {
-          // Format full datetime
-          return new Date(field.value).toLocaleString("es-ES", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          })
-        }
-        return new Date(field.value).toLocaleDateString("es-ES")
+        return new Date(field.value).toLocaleString()
       case "currency":
         return `$${Number(field.value).toFixed(2)}`
+      case "list":
+        if (Array.isArray(field.value)) {
+          return field.value.join(", ")
+        }
+        return field.value
       default:
-        return field.value.toString()
+        return String(field.value)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-
         <div className="space-y-4">
-          {fields.map((field, index) => (
+          {data.map((field, index) => (
             <div key={index}>
-              <div className="grid grid-cols-3 gap-4 py-2">
-                <div className="font-medium text-sm text-muted-foreground">{field.label}:</div>
-                <div className="col-span-2 text-sm">{formatValue(field)}</div>
+              <div className="flex justify-between items-start py-2">
+                <span className="font-medium text-sm text-muted-foreground min-w-[120px]">{field.label}:</span>
+                <div className="flex-1 text-right">{formatValue(field)}</div>
               </div>
-              {index < fields.length - 1 && <Separator />}
+              {index < data.length - 1 && <Separator />}
             </div>
           ))}
         </div>
