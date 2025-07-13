@@ -59,3 +59,26 @@ export function clearAuthData(): void {
   localStorage.removeItem("username")
   localStorage.removeItem("rol")
 }
+
+/**
+ * Wrapper de `fetch` que inyecta automáticamente el token JWT guardado en
+ * `localStorage` (si existe) en la cabecera `Authorization`.
+ *
+ *  @param input — URL o RequestInfo
+ *  @param init  — Opciones del fetch estándar
+ */
+export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  // Para evitar errores en SSR comprobamos que estamos en el navegador
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+
+  // Combinamos las cabeceras existentes con Authorization (si hay token)
+  const headers = new Headers(init.headers)
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`)
+  }
+
+  return fetch(input, {
+    ...init,
+    headers,
+  })
+}
