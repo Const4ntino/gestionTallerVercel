@@ -4,10 +4,11 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock, AlertCircle, Play, CheckCircle, XCircle, Calendar, User, Car, Settings } from "lucide-react"
+import { Clock, AlertCircle, Play, CheckCircle, XCircle, Calendar, User, Car, Settings, Timer } from "lucide-react"
 import { mantenimientosApi } from "@/lib/mantenimientos-api"
 import type { MantenimientoResponse, MantenimientoStats, MantenimientoEstado } from "@/types/mantenimientos"
 import { toast } from "sonner"
+import { formatDateTime, getElapsedTime } from "@/lib/utils" // Importar las nuevas utilidades
 
 interface MantenimientosDashboardProps {
   onRefresh: () => void
@@ -24,10 +25,27 @@ export function MantenimientosDashboard({ onRefresh }: MantenimientosDashboardPr
     total: 0,
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [elapsedTimes, setElapsedTimes] = useState<{ [key: number]: string }>({})
 
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedTimes((prevTimes) => {
+        const newTimes = { ...prevTimes }
+        mantenimientos.forEach((mantenimiento) => {
+          if (mantenimiento.estado === "EN_PROCESO" && mantenimiento.fechaInicio) {
+            newTimes[mantenimiento.id] = getElapsedTime(mantenimiento.fechaInicio)
+          }
+        })
+        return newTimes
+      })
+    }, 1000) // Actualizar cada segundo
+
+    return () => clearInterval(interval)
+  }, [mantenimientos]) // Depende de los mantenimientos para recalcular los tiempos
 
   const loadData = async () => {
     try {
@@ -62,6 +80,15 @@ export function MantenimientosDashboard({ onRefresh }: MantenimientosDashboardPr
       )
 
       setStats(newStats)
+
+      // Inicializar tiempos transcurridos
+      const initialElapsedTimes: { [key: number]: string } = {}
+      data.forEach((mantenimiento) => {
+        if (mantenimiento.estado === "EN_PROCESO" && mantenimiento.fechaInicio) {
+          initialElapsedTimes[mantenimiento.id] = getElapsedTime(mantenimiento.fechaInicio)
+        }
+      })
+      setElapsedTimes(initialElapsedTimes)
     } catch (error) {
       toast.error("Error al cargar datos del dashboard")
       console.error(error)
@@ -130,8 +157,9 @@ export function MantenimientosDashboard({ onRefresh }: MantenimientosDashboardPr
         servicioId: mantenimiento.servicio.id,
         trabajadorId: mantenimiento.trabajador?.id || null,
         estado: nuevoEstado,
-        fechaInicio: mantenimiento.fechaInicio,
-        fechaFin: nuevoEstado === "COMPLETADO" ? new Date().toISOString() : mantenimiento.fechaFin,
+        // No enviar fechaInicio y fechaFin si el backend las maneja automáticamente
+        // fechaInicio: mantenimiento.fechaInicio,
+        // fechaFin: nuevoEstado === "COMPLETADO" ? new Date().toISOString() : mantenimiento.fechaFin,
         observacionesCliente: mantenimiento.observacionesCliente,
         observacionesTrabajador: mantenimiento.observacionesTrabajador,
         productosUsados: mantenimiento.productosUsados.map((p) => ({
@@ -272,11 +300,18 @@ export function MantenimientosDashboard({ onRefresh }: MantenimientosDashboardPr
                       {mantenimiento.fechaInicio && (
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                           <Calendar className="h-3 w-3" />
-                          <span>{new Date(mantenimiento.fechaInicio).toLocaleDateString()}</span>
+                          <span>Inicio: {formatDateTime(mantenimiento.fechaInicio)}</span>
                         </div>
                       )}
                     </div>
                   </div>
+
+                  {mantenimiento.estado === "EN_PROCESO" && mantenimiento.fechaInicio && (
+                    <div className="flex items-center space-x-2 text-sm text-blue-500 font-medium">
+                      <Timer className="h-4 w-4" />
+                      <span>Tiempo transcurrido: {elapsedTimes[mantenimiento.id] || "Calculando..."}</span>
+                    </div>
+                  )}
 
                   <div className="flex space-x-2">
                     {getTransicionesPermitidas(mantenimiento.estado).map((nuevoEstado) => (
