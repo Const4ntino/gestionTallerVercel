@@ -156,7 +156,7 @@ export function MantenimientosPendientes() {
                     </CardTitle>
                     <CardDescription className="flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      {mantenimiento.vehiculo.cliente.usuario.nombreCompleto}
+                      <span>{mantenimiento.vehiculo.cliente?.usuario?.nombreCompleto || "Cliente no disponible"}</span>
                     </CardDescription>
                   </div>
                   <Button onClick={() => handleFacturar(mantenimiento)}>
@@ -178,8 +178,8 @@ export function MantenimientosPendientes() {
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Trabajador:</span>
-                      <span>{mantenimiento.trabajador.usuario.nombreCompleto}</span>
-                      <Badge variant="secondary">{mantenimiento.trabajador.especialidad}</Badge>
+                      <span>{mantenimiento.trabajador?.usuario?.nombreCompleto || "No asignado"}</span>
+                      <Badge variant="secondary">{mantenimiento.trabajador?.especialidad || "Sin especialidad"}</Badge>
                     </div>
 
                     <div className="flex items-center gap-2">
