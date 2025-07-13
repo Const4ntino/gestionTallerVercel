@@ -108,7 +108,7 @@ export const hasRole = (role: string): boolean => {
 
 // Función para login
 export const loginUser = async (credentials: LoginRequest): Promise<AuthResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -125,7 +125,7 @@ export const loginUser = async (credentials: LoginRequest): Promise<AuthResponse
 
 // Función para registro
 export const registerUser = async (userData: RegisterRequest): Promise<AuthResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
