@@ -33,7 +33,7 @@ export interface AuthData {
   }
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://3c25d5c5b9b3.ngrok-free.app"
 
 // Función para obtener headers de autenticación
 export const getAuthHeaders = (): HeadersInit => {
