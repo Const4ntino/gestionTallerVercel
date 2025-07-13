@@ -107,14 +107,50 @@ export default function MantenimientosPage() {
   const loadMantenimientos = async (page = 0, size = 10, filters: FilterParams = {}) => {
     try {
       setIsLoading(true)
-      const response = await mantenimientosApi.filter({
-        page,
-        size,
-        sort: "fechaCreacion,desc",
-        ...filters,
-      })
-      setPagination(response)
-      setMantenimientos(response.content)
+
+      // Si hay filtros, usar el endpoint de filtrado, sino usar getAll
+      if (Object.keys(filters).length > 0 && Object.values(filters).some((v) => v !== undefined && v !== "")) {
+        const response = await mantenimientosApi.filter({
+          page,
+          size,
+          sort: "fechaCreacion,desc",
+          ...filters,
+        })
+        setPagination(response)
+        setMantenimientos(response.content)
+      } else {
+        // Para la carga inicial sin filtros, usar getAll
+        const data = await mantenimientosApi.getAll()
+        setMantenimientos(data)
+        // Simular paginación para getAll
+        const totalElements = data.length
+        const totalPages = Math.ceil(totalElements / size)
+        const startIndex = page * size
+        const endIndex = startIndex + size
+        const paginatedData = data.slice(startIndex, endIndex)
+
+        setPagination({
+          content: paginatedData,
+          totalElements,
+          totalPages,
+          size,
+          number: page,
+          first: page === 0,
+          last: page >= totalPages - 1,
+          numberOfElements: paginatedData.length,
+          empty: paginatedData.length === 0,
+          pageable: {
+            pageNumber: page,
+            pageSize: size,
+            sort: { empty: false, sorted: true, unsorted: false },
+            offset: startIndex,
+            paged: true,
+            unpaged: false,
+          },
+          sort: { empty: false, sorted: true, unsorted: false },
+        })
+        setMantenimientos(paginatedData)
+      }
     } catch (error) {
       toast.error("Error al cargar mantenimientos")
       console.error(error)
@@ -125,7 +161,9 @@ export default function MantenimientosPage() {
 
   const handleSearch = (search: string) => {
     setCurrentPage(0)
-    loadMantenimientos(0, pageSize, { ...currentFilters, search })
+    const newFilters = { ...currentFilters, search }
+    setCurrentFilters(newFilters)
+    loadMantenimientos(0, pageSize, newFilters)
   }
 
   const handlePageChange = (page: number) => {

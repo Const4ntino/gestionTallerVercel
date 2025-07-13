@@ -1,26 +1,50 @@
-import type { LoginRequest, RegisterRequest, AuthResponse } from "@/types/auth"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://3c25d5c5b9b3.ngrok-free.app"
+export function getAuthHeaders() {
+  const token = localStorage.getItem("token")
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  }
+}
 
-export async function loginUser(credentials: LoginRequest): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+export async function authFetch(url: string, options: RequestInit = {}) {
+  const headers = {
+    ...getAuthHeaders(),
+    ...options.headers,
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+  })
+}
+
+export async function login(email: string, password: string) {
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(credentials),
+    body: JSON.stringify({ email, password }),
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.message || "Error en el inicio de sesión")
+    throw new Error("Credenciales inválidas")
   }
 
-  return response.json()
+  const data = await response.json()
+
+  if (data.token) {
+    localStorage.setItem("token", data.token)
+    localStorage.setItem("user", JSON.stringify(data.user))
+  }
+
+  return data
 }
 
-export async function registerUser(userData: RegisterRequest): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+export async function register(userData: any) {
+  const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -29,56 +53,41 @@ export async function registerUser(userData: RegisterRequest): Promise<AuthRespo
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.message || "Error en el registro")
+    const error = await response.text()
+    throw new Error(error || "Error en el registro")
   }
 
   return response.json()
 }
 
-export function saveAuthData(authResponse: AuthResponse): void {
-  localStorage.setItem("token", authResponse.token)
-  localStorage.setItem("username", authResponse.username)
-  localStorage.setItem("rol", authResponse.rol)
-}
-
-export function getAuthData() {
-  if (typeof window === "undefined") return null
-
-  const token = localStorage.getItem("token")
-  const username = localStorage.getItem("username")
-  const rol = localStorage.getItem("rol")
-
-  if (!token || !username || !rol) return null
-
-  return { token, username, rol }
-}
-
+/**
+ * Elimina todos los datos de autenticación almacenados en localStorage.
+ */
 export function clearAuthData(): void {
   localStorage.removeItem("token")
-  localStorage.removeItem("username")
-  localStorage.removeItem("rol")
+  localStorage.removeItem("user")
+  localStorage.removeItem("username") // por retro-compatibilidad
+  localStorage.removeItem("rol") // por retro-compatibilidad
 }
 
-/**
- * Wrapper de `fetch` que inyecta automáticamente el token JWT guardado en
- * `localStorage` (si existe) en la cabecera `Authorization`.
- *
- *  @param input — URL o RequestInfo
- *  @param init  — Opciones del fetch estándar
- */
-export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
-  // Para evitar errores en SSR comprobamos que estamos en el navegador
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+export function logout() {
+  clearAuthData()
+  window.location.href = "/login"
+}
 
-  // Combinamos las cabeceras existentes con Authorization (si hay token)
-  const headers = new Headers(init.headers)
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`)
-  }
+export function getStoredUser() {
+  if (typeof window === "undefined") return null
 
-  return fetch(input, {
-    ...init,
-    headers,
-  })
+  const userStr = localStorage.getItem("user")
+  return userStr ? JSON.parse(userStr) : null
+}
+
+export function getStoredToken() {
+  if (typeof window === "undefined") return null
+
+  return localStorage.getItem("token")
+}
+
+export function isAuthenticated() {
+  return !!getStoredToken()
 }
