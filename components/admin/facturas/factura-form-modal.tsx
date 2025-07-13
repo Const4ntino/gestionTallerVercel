@@ -47,8 +47,8 @@ export function FacturaFormModal({
 
       const facturaRequest: FacturaRequest = {
         mantenimientoId: mantenimiento.id,
-        clienteId: mantenimiento.vehiculo.cliente.id,
-        tallerId: mantenimiento.servicio.taller.id,
+        clienteId: mantenimiento.vehiculo?.cliente?.id || 0,
+        tallerId: mantenimiento.servicio?.taller?.id || 0,
         detalles: detalles.trim() || undefined,
       }
 
@@ -101,41 +101,45 @@ export function FacturaFormModal({
                   <Car className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Vehículo:</span>
                   <span>
-                    {mantenimiento.vehiculo.marca} {mantenimiento.vehiculo.modelo}
+                    {mantenimiento.vehiculo?.marca || "N/A"} {mantenimiento.vehiculo?.modelo || "N/A"}
                   </span>
-                  <Badge variant="outline">{mantenimiento.vehiculo.placa}</Badge>
+                  <Badge variant="outline">{mantenimiento.vehiculo?.placa || "Sin placa"}</Badge>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Cliente:</span>
-                  <span>{mantenimiento.vehiculo.cliente.usuario.nombreCompleto}</span>
+                  <span>{mantenimiento.vehiculo?.cliente?.usuario?.nombreCompleto || "Cliente no disponible"}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Wrench className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Servicio:</span>
-                  <span>{mantenimiento.servicio.nombre}</span>
+                  <span>{mantenimiento.servicio?.nombre || "Servicio no disponible"}</span>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div>
                   <span className="font-medium">Trabajador:</span>
-                  <span className="ml-2">{mantenimiento.trabajador.usuario.nombreCompleto}</span>
-                  <Badge className="ml-2" variant="secondary">
-                    {mantenimiento.trabajador.especialidad}
-                  </Badge>
+                  <span className="ml-2">{mantenimiento.trabajador?.usuario?.nombreCompleto || "No asignado"}</span>
+                  {mantenimiento.trabajador?.especialidad && (
+                    <Badge className="ml-2" variant="secondary">
+                      {mantenimiento.trabajador.especialidad}
+                    </Badge>
+                  )}
                 </div>
 
                 <div>
                   <span className="font-medium">Taller:</span>
-                  <span className="ml-2">{mantenimiento.servicio.taller.nombre}</span>
+                  <span className="ml-2">{mantenimiento.servicio?.taller?.nombre || "Taller no disponible"}</span>
                 </div>
 
                 <div>
                   <span className="font-medium">Finalizado:</span>
-                  <span className="ml-2">{formatDate(mantenimiento.fechaFin)}</span>
+                  <span className="ml-2">
+                    {mantenimiento.fechaFin ? formatDate(mantenimiento.fechaFin) : "Fecha no disponible"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -153,12 +157,14 @@ export function FacturaFormModal({
                 {mantenimiento.productosUsados.map((producto, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded">
                     <div>
-                      <span className="font-medium">{producto.producto.nombre}</span>
+                      <span className="font-medium">{producto.producto?.nombre || "Producto sin nombre"}</span>
                       <span className="text-muted-foreground ml-2">
-                        x{producto.cantidadUsada} @ {formatCurrency(producto.precioEnUso)}
+                        x{producto.cantidadUsada || 0} @ {formatCurrency(producto.precioEnUso || 0)}
                       </span>
                     </div>
-                    <span className="font-medium">{formatCurrency(producto.precioEnUso * producto.cantidadUsada)}</span>
+                    <span className="font-medium">
+                      {formatCurrency((producto.precioEnUso || 0) * (producto.cantidadUsada || 0))}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -174,7 +180,7 @@ export function FacturaFormModal({
             <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
               <div className="flex items-center justify-between text-lg">
                 <span className="font-semibold">Total a Facturar:</span>
-                <span className="font-bold text-primary">{formatCurrency(calculatedTotal.totalCalculado)}</span>
+                <span className="font-bold text-primary">{formatCurrency(calculatedTotal.totalCalculado || 0)}</span>
               </div>
             </div>
           </div>

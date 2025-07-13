@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -10,28 +10,30 @@ import { toast } from "sonner"
 import { facturasApi } from "@/lib/facturas-api"
 import { FacturaFormModal } from "./factura-form-modal"
 import type { MantenimientoPendienteFacturar, CalculatedTotalResponse } from "@/types/facturas"
-import type { PageResponse } from "@/types/admin"
-import { Car, User, Wrench, Calendar, Package, Receipt } from "lucide-react"
+import { Car, User, Wrench, Package, Receipt, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 
 export function MantenimientosPendientes() {
   const [mantenimientos, setMantenimientos] = useState<MantenimientoPendienteFacturar[]>([])
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(0)
-  const [size, setSize] = useState(10)
-  const [sort, setSort] = useState("fechaFin,desc")
+  const [currentPage, setCurrentPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+  const [sortBy, setSortBy] = useState("fechaFin,desc")
+
+  // Modal states
   const [selectedMantenimiento, setSelectedMantenimiento] = useState<MantenimientoPendienteFacturar | null>(null)
   const [calculatedTotal, setCalculatedTotal] = useState<CalculatedTotalResponse | null>(null)
-  const [showFacturaModal, setShowFacturaModal] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [calculatingTotal, setCalculatingTotal] = useState(false)
 
   const loadMantenimientos = async () => {
     try {
       setLoading(true)
-      const response: PageResponse<MantenimientoPendienteFacturar> = await facturasApi.getMantenimientosPendientes({
-        page,
-        size,
-        sort,
+      const response = await facturasApi.getMantenimientosPendientes({
+        page: currentPage,
+        size: pageSize,
+        sort: sortBy,
       })
 
       setMantenimientos(response.content)
@@ -45,29 +47,32 @@ export function MantenimientosPendientes() {
     }
   }
 
-  const handleFacturar = async (mantenimiento: MantenimientoPendienteFacturar) => {
+  useEffect(() => {
+    loadMantenimientos()
+  }, [currentPage, pageSize, sortBy])
+
+  const handleCreateFactura = async (mantenimiento: MantenimientoPendienteFacturar) => {
     try {
-      const totalResponse = await facturasApi.calcularTotal(mantenimiento.id)
-      setCalculatedTotal(totalResponse)
+      setCalculatingTotal(true)
+      const total = await facturasApi.calculateTotal(mantenimiento.id)
       setSelectedMantenimiento(mantenimiento)
-      setShowFacturaModal(true)
+      setCalculatedTotal(total)
+      setModalOpen(true)
     } catch (error) {
       console.error("Error al calcular total:", error)
       toast.error("Error al calcular el total de la factura")
+    } finally {
+      setCalculatingTotal(false)
     }
   }
 
   const handleFacturaCreated = () => {
-    setShowFacturaModal(false)
+    setModalOpen(false)
     setSelectedMantenimiento(null)
     setCalculatedTotal(null)
-    loadMantenimientos() // Recargar la lista
+    loadMantenimientos()
     toast.success("Factura creada exitosamente")
   }
-
-  useEffect(() => {
-    loadMantenimientos()
-  }, [page, size, sort])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-CO", {
@@ -88,37 +93,40 @@ export function MantenimientosPendientes() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-4">
+        <div className="h-8 bg-muted animate-pulse rounded" />
+        <div className="h-32 bg-muted animate-pulse rounded" />
+        <div className="h-32 bg-muted animate-pulse rounded" />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Mantenimientos Pendientes de Facturar</h2>
+          <h2 className="text-2xl font-bold">Mantenimientos Pendientes de Facturar</h2>
           <p className="text-muted-foreground">
             {totalElements} mantenimiento{totalElements !== 1 ? "s" : ""} completado{totalElements !== 1 ? "s" : ""}{" "}
-            pendiente{totalElements !== 1 ? "s" : ""} de facturar
+            pendiente{totalElements !== 1 ? "s" : ""} de facturación
           </p>
         </div>
 
         <div className="flex items-center gap-4">
-          <Select value={sort} onValueChange={setSort}>
+          <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="Ordenar por" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="fechaFin,desc">Fecha Fin (más reciente)</SelectItem>
-              <SelectItem value="fechaFin,asc">Fecha Fin (más antigua)</SelectItem>
-              <SelectItem value="fechaCreacion,desc">Fecha Creación (más reciente)</SelectItem>
-              <SelectItem value="fechaCreacion,asc">Fecha Creación (más antigua)</SelectItem>
+              <SelectItem value="fechaFin,desc">Más recientes primero</SelectItem>
+              <SelectItem value="fechaFin,asc">Más antiguos primero</SelectItem>
+              <SelectItem value="vehiculo.placa,asc">Por placa (A-Z)</SelectItem>
+              <SelectItem value="servicio.nombre,asc">Por servicio (A-Z)</SelectItem>
             </SelectContent>
           </Select>
 
-          <Select value={size.toString()} onValueChange={(value) => setSize(Number.parseInt(value))}>
+          <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(Number(value))}>
             <SelectTrigger className="w-24">
               <SelectValue />
             </SelectTrigger>
@@ -132,6 +140,7 @@ export function MantenimientosPendientes() {
         </div>
       </div>
 
+      {/* Mantenimientos List */}
       {mantenimientos.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -143,38 +152,50 @@ export function MantenimientosPendientes() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6">
+        <div className="space-y-4">
           {mantenimientos.map((mantenimiento) => (
             <Card key={mantenimiento.id} className="overflow-hidden">
-              <CardHeader>
+              <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2">
-                      <Car className="h-5 w-5" />
-                      {mantenimiento.vehiculo?.marca || "N/A"} {mantenimiento.vehiculo?.modelo || "N/A"}
-                      <Badge variant="outline">{mantenimiento.vehiculo?.placa || "Sin placa"}</Badge>
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      <span>{mantenimiento.vehiculo?.cliente?.usuario?.nombreCompleto || "Cliente no disponible"}</span>
-                    </CardDescription>
-                  </div>
-                  <Button onClick={() => handleFacturar(mantenimiento)}>
-                    <Receipt className="h-4 w-4 mr-2" />
-                    Facturar
-                  </Button>
+                  <CardTitle className="flex items-center gap-2">
+                    <Receipt className="h-5 w-5" />
+                    Mantenimiento #{mantenimiento.id}
+                  </CardTitle>
+                  <Badge variant="secondary">{mantenimiento.estado}</Badge>
                 </div>
+                <CardDescription className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Finalizado: {formatDate(mantenimiento.fechaFin)}
+                </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-4">
+                {/* Información Principal */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <Wrench className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Servicio:</span>
-                      <span>{mantenimiento.servicio?.nombre || "Sin servicio"}</span>
+                      <Car className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Vehículo:</span>
+                      <span>
+                        {mantenimiento.vehiculo?.marca || "N/A"} {mantenimiento.vehiculo?.modelo || "N/A"}
+                      </span>
+                      <Badge variant="outline">{mantenimiento.vehiculo?.placa || "Sin placa"}</Badge>
                     </div>
 
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Cliente:</span>
+                      <span>{mantenimiento.vehiculo?.cliente?.usuario?.nombreCompleto || "Cliente no disponible"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Wrench className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Servicio:</span>
+                      <span>{mantenimiento.servicio?.nombre || "Servicio no disponible"}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Trabajador:</span>
@@ -184,39 +205,49 @@ export function MantenimientosPendientes() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Finalizado:</span>
-                      <span>{mantenimiento.fechaFin ? formatDate(mantenimiento.fechaFin) : "Sin fecha"}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
                     <div>
                       <span className="font-medium">Taller:</span>
-                      <span className="ml-2">{mantenimiento.servicio?.taller?.nombre || "Sin taller"}</span>
-                    </div>
-
-                    <div>
-                      <span className="font-medium">Estado:</span>
-                      <Badge className="ml-2" variant="default">
-                        {mantenimiento.estado || "Sin estado"}
-                      </Badge>
+                      <span className="ml-2">{mantenimiento.servicio?.taller?.nombre || "Taller no disponible"}</span>
                     </div>
                   </div>
                 </div>
 
+                {/* Observaciones */}
+                {(mantenimiento.observacionesCliente || mantenimiento.observacionesTrabajador) && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      {mantenimiento.observacionesCliente && (
+                        <div>
+                          <span className="font-medium text-sm">Observaciones del Cliente:</span>
+                          <p className="text-sm text-muted-foreground mt-1">{mantenimiento.observacionesCliente}</p>
+                        </div>
+                      )}
+                      {mantenimiento.observacionesTrabajador && (
+                        <div>
+                          <span className="font-medium text-sm">Observaciones del Trabajador:</span>
+                          <p className="text-sm text-muted-foreground mt-1">{mantenimiento.observacionesTrabajador}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Productos Utilizados */}
                 {mantenimiento.productosUsados && mantenimiento.productosUsados.length > 0 && (
                   <>
                     <Separator />
-                    <div>
-                      <h4 className="font-medium flex items-center gap-2 mb-3">
+                    <div className="space-y-3">
+                      <h4 className="font-medium flex items-center gap-2">
                         <Package className="h-4 w-4" />
                         Productos Utilizados
                       </h4>
-                      <div className="grid gap-2">
+                      <div className="space-y-2">
                         {mantenimiento.productosUsados.map((producto, index) => (
-                          <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                          <div
+                            key={index}
+                            className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded"
+                          >
                             <div>
                               <span className="font-medium">{producto.producto?.nombre || "Producto sin nombre"}</span>
                               <span className="text-muted-foreground ml-2">x{producto.cantidadUsada || 0}</span>
@@ -231,64 +262,66 @@ export function MantenimientosPendientes() {
                   </>
                 )}
 
-                {(mantenimiento.observacionesCliente || mantenimiento.observacionesTrabajador) && (
-                  <>
-                    <Separator />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {mantenimiento.observacionesCliente && (
-                        <div>
-                          <h4 className="font-medium mb-2">Observaciones del Cliente</h4>
-                          <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                            {mantenimiento.observacionesCliente}
-                          </p>
-                        </div>
-                      )}
+                <Separator />
 
-                      {mantenimiento.observacionesTrabajador && (
-                        <div>
-                          <h4 className="font-medium mb-2">Observaciones del Trabajador</h4>
-                          <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                            {mantenimiento.observacionesTrabajador}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
+                {/* Acciones */}
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => handleCreateFactura(mantenimiento)}
+                    disabled={calculatingTotal}
+                    className="flex items-center gap-2"
+                  >
+                    <Receipt className="h-4 w-4" />
+                    {calculatingTotal ? "Calculando..." : "Crear Factura"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Paginación */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Mostrando {page * size + 1} a {Math.min((page + 1) * size, totalElements)} de {totalElements} resultados
+            Mostrando {currentPage * pageSize + 1} a {Math.min((currentPage + 1) * pageSize, totalElements)} de{" "}
+            {totalElements} resultados
           </p>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={page === 0}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
               Anterior
             </Button>
 
             <span className="text-sm">
-              Página {page + 1} de {totalPages}
+              Página {currentPage + 1} de {totalPages}
             </span>
 
-            <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages - 1}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+            >
               Siguiente
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* Modal de creación de factura */}
+      {/* Modal */}
       {selectedMantenimiento && calculatedTotal && (
         <FacturaFormModal
-          open={showFacturaModal}
-          onOpenChange={setShowFacturaModal}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
           mantenimiento={selectedMantenimiento}
           calculatedTotal={calculatedTotal}
           onSuccess={handleFacturaCreated}
