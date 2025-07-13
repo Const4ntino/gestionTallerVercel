@@ -18,6 +18,7 @@ import {
   Package,
   Settings,
   ClipboardList,
+  Receipt,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
@@ -62,6 +63,11 @@ const navigation = [
     name: "Mantenimientos",
     href: "/admin/mantenimientos",
     icon: ClipboardList,
+  },
+  {
+    name: "Facturas",
+    href: "/admin/facturas",
+    icon: Receipt,
   },
 ]
 
