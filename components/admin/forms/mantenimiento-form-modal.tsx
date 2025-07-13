@@ -56,8 +56,6 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     servicioId: "",
     trabajadorId: "",
     estado: "SOLICITADO" as MantenimientoEstado,
-    fechaInicio: "",
-    fechaFin: "",
     observacionesCliente: "",
     observacionesTrabajador: "",
   })
@@ -73,8 +71,6 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
           servicioId: mantenimiento.servicio.id.toString(),
           trabajadorId: mantenimiento.trabajador?.id?.toString() || "",
           estado: mantenimiento.estado,
-          fechaInicio: mantenimiento.fechaInicio ? mantenimiento.fechaInicio.slice(0, 16) : "",
-          fechaFin: mantenimiento.fechaFin ? mantenimiento.fechaFin.slice(0, 16) : "",
           observacionesCliente: mantenimiento.observacionesCliente || "",
           observacionesTrabajador: mantenimiento.observacionesTrabajador || "",
         })
@@ -92,8 +88,6 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
           servicioId: "",
           trabajadorId: "",
           estado: "SOLICITADO",
-          fechaInicio: "",
-          fechaFin: "",
           observacionesCliente: "",
           observacionesTrabajador: "",
         })
@@ -150,8 +144,6 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
         servicioId: Number.parseInt(formData.servicioId),
         trabajadorId: formData.trabajadorId ? Number.parseInt(formData.trabajadorId) : null,
         estado: formData.estado,
-        fechaInicio: formData.fechaInicio || null,
-        fechaFin: formData.fechaFin || null,
         observacionesCliente: formData.observacionesCliente || null,
         observacionesTrabajador: formData.observacionesTrabajador || null,
         productosUsados: productosUsados.length > 0 ? productosUsados : undefined,
@@ -197,7 +189,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mantenimiento ? "Editar Mantenimiento" : "Crear Nuevo Mantenimiento"}</DialogTitle>
           <DialogDescription>
@@ -274,28 +266,6 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fechaInicio">Fecha de Inicio (Opcional)</Label>
-              <Input
-                id="fechaInicio"
-                type="datetime-local"
-                value={formData.fechaInicio}
-                onChange={(e) => handleChange("fechaInicio", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fechaFin">Fecha de Fin (Opcional)</Label>
-              <Input
-                id="fechaFin"
-                type="datetime-local"
-                value={formData.fechaFin}
-                onChange={(e) => handleChange("fechaFin", e.target.value)}
-              />
             </div>
           </div>
 

@@ -168,6 +168,19 @@ export default function MantenimientosPage() {
     }
   }
 
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return "N/A"
+
+    const date = new Date(dateString)
+    return date.toLocaleString("es-ES", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
   const columns = [
     {
       key: "id",
@@ -204,7 +217,9 @@ export default function MantenimientosPage() {
     {
       key: "fechaCreacion",
       header: "Fecha Creación",
-      render: (mantenimiento: MantenimientoResponse) => new Date(mantenimiento.fechaCreacion).toLocaleDateString(),
+      render: (mantenimiento: MantenimientoResponse) => (
+        <div className="min-w-[140px] text-sm">{formatDateTime(mantenimiento.fechaCreacion)}</div>
+      ),
     },
   ]
 
