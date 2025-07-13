@@ -90,6 +90,19 @@ export const vehiculosApi = {
     if (!response.ok) throw new Error("Error al obtener vehículos")
     return response.json()
   },
+
+  filter: async (search?: string, estado?: string): Promise<PageResponse<VehiculoResponse>> => {
+    const searchParams = new URLSearchParams()
+    if (search) searchParams.append("search", search)
+    if (estado) searchParams.append("estado", estado)
+    searchParams.append("size", "50") // Aumentamos el tamaño para mejor búsqueda
+
+    const response = await fetch(`${API_BASE_URL}/api/vehiculos/filtrar?${searchParams}`, {
+      headers: getAuthHeaders(),
+    })
+    if (!response.ok) throw new Error("Error al filtrar vehículos")
+    return response.json()
+  },
 }
 
 export const serviciosMantenimientoApi = {
@@ -113,6 +126,15 @@ export const trabajadoresMantenimientoApi = {
 }
 
 export const productosMantenimientoApi = {
+  getAll: async (): Promise<ProductoResponse[]> => {
+    const response = await fetch(`${API_BASE_URL}/api/productos`, {
+      headers: getAuthHeaders(),
+    })
+    if (!response.ok) throw new Error("Error al obtener productos")
+    const data = await response.json()
+    return Array.isArray(data) ? data : data.content || []
+  },
+
   filterByTaller: async (tallerId: number, search?: string): Promise<ProductoResponse[]> => {
     const searchParams = new URLSearchParams()
     searchParams.append("tallerId", tallerId.toString())

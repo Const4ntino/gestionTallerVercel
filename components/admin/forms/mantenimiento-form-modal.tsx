@@ -10,8 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2 } from "lucide-react"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Plus, Trash2, Check, ChevronsUpDown } from "lucide-react"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 import {
   mantenimientosApi,
   vehiculosApi,
@@ -19,7 +22,7 @@ import {
   trabajadoresMantenimientoApi,
   productosMantenimientoApi,
 } from "@/lib/mantenimientos-api"
-import type { MantenimientoResponse, MantenimientoEstado } from "@/types/mantenimientos"
+import type { MantenimientoResponse, MantenimientoEstado, VehiculoResponse } from "@/types/mantenimientos"
 
 const mantenimientoSchema = z.object({
   vehiculoId: z.number().min(1, "Debe seleccionar un vehículo"),
@@ -50,13 +53,15 @@ interface MantenimientoFormModalProps {
 
 export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSuccess }: MantenimientoFormModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [vehiculos, setVehiculos] = useState<any[]>([])
+  const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
   const [servicios, setServicios] = useState<any[]>([])
   const [trabajadores, setTrabajadores] = useState<any[]>([])
   const [productos, setProductos] = useState<any[]>([])
   const [productosUsados, setProductosUsados] = useState<
     Array<{ productoId: number; cantidadUsada: number; precioEnUso: number }>
   >([])
+  const [vehiculoSearch, setVehiculoSearch] = useState("")
+  const [openVehiculoCombobox, setOpenVehiculoCombobox] = useState(false)
 
   const {
     register,
@@ -72,6 +77,8 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
       productosUsados: [],
     },
   })
+
+  const selectedVehiculoId = watch("vehiculoId")
 
   useEffect(() => {
     if (open) {
@@ -106,20 +113,32 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
   const loadData = async () => {
     try {
+      setIsLoading(true)
       const [vehiculosData, serviciosData, trabajadoresData, productosData] = await Promise.all([
-        vehiculosApi.getAll(),
+        vehiculosApi.filter("", "ACTIVO"), // Solo vehículos activos
         serviciosMantenimientoApi.getAll(),
         trabajadoresMantenimientoApi.getAll(),
         productosMantenimientoApi.getAll(),
       ])
 
-      setVehiculos(vehiculosData)
+      setVehiculos(vehiculosData.content || [])
       setServicios(serviciosData)
       setTrabajadores(trabajadoresData)
       setProductos(productosData)
     } catch (error) {
       toast.error("Error al cargar datos")
       console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const searchVehiculos = async (search: string) => {
+    try {
+      const response = await vehiculosApi.filter(search, "ACTIVO")
+      setVehiculos(response.content || [])
+    } catch (error) {
+      console.error("Error al buscar vehículos:", error)
     }
   }
 
@@ -176,6 +195,8 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     }
   }
 
+  const selectedVehiculo = vehiculos.find((v) => v.id === selectedVehiculoId)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -188,24 +209,66 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Vehículo */}
+            {/* Vehículo con búsqueda */}
             <div className="space-y-2">
               <Label htmlFor="vehiculoId">Vehículo</Label>
-              <Select
-                value={watch("vehiculoId")?.toString() || "0"}
-                onValueChange={(value) => setValue("vehiculoId", Number.parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un vehículo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vehiculos.map((vehiculo) => (
-                    <SelectItem key={vehiculo.id} value={vehiculo.id.toString()}>
-                      {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openVehiculoCombobox} onOpenChange={setOpenVehiculoCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openVehiculoCombobox}
+                    className="w-full justify-between bg-transparent"
+                  >
+                    {selectedVehiculo
+                      ? `${selectedVehiculo.placa} - ${selectedVehiculo.marca} ${selectedVehiculo.modelo}`
+                      : "Selecciona un vehículo..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Buscar vehículo por placa, marca o modelo..."
+                      value={vehiculoSearch}
+                      onValueChange={(value) => {
+                        setVehiculoSearch(value)
+                        searchVehiculos(value)
+                      }}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No se encontraron vehículos.</CommandEmpty>
+                      <CommandGroup>
+                        {vehiculos.map((vehiculo) => (
+                          <CommandItem
+                            key={vehiculo.id}
+                            value={`${vehiculo.placa} ${vehiculo.marca} ${vehiculo.modelo}`}
+                            onSelect={() => {
+                              setValue("vehiculoId", vehiculo.id)
+                              setOpenVehiculoCombobox(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedVehiculoId === vehiculo.id ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                Cliente: {vehiculo.cliente.usuario.nombreCompleto}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               {errors.vehiculoId && <p className="text-sm text-red-500">{errors.vehiculoId.message}</p>}
             </div>
 
@@ -213,7 +276,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
             <div className="space-y-2">
               <Label htmlFor="servicioId">Servicio</Label>
               <Select
-                value={watch("servicioId")?.toString() || "0"}
+                value={watch("servicioId")?.toString() || "0"} // Updated default value to "0"
                 onValueChange={(value) => setValue("servicioId", Number.parseInt(value))}
               >
                 <SelectTrigger>
@@ -234,14 +297,14 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
             <div className="space-y-2">
               <Label htmlFor="trabajadorId">Trabajador (Opcional)</Label>
               <Select
-                value={watch("trabajadorId")?.toString() || "0"}
+                value={watch("trabajadorId")?.toString() || "0"} // Updated default value to "0"
                 onValueChange={(value) => setValue("trabajadorId", value ? Number.parseInt(value) : undefined)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un trabajador" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Sin asignar</SelectItem>
+                  <SelectItem value="0">Sin asignar</SelectItem> // Updated value to "0"
                   {trabajadores.map((trabajador) => (
                     <SelectItem key={trabajador.id} value={trabajador.id.toString()}>
                       {trabajador.usuario.nombreCompleto} - {trabajador.especialidad}
