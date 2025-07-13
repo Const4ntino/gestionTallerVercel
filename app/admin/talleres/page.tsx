@@ -10,6 +10,17 @@ import { talleresApi } from "@/lib/admin-api"
 import type { TallerResponse, PageResponse } from "@/types/admin"
 import { toast } from "sonner"
 import { TallerFormModal } from "@/components/admin/forms/taller-form-modal"
+import { AdvancedFilters } from "@/components/admin/advanced-filters"
+
+interface FilterParams {
+  search?: string
+  ciudad?: string
+  estado?: string
+  fechaCreacionDesde?: string
+  fechaCreacionHasta?: string
+  fechaActualizacionDesde?: string
+  fechaActualizacionHasta?: string
+}
 
 export default function TalleresPage() {
   const [talleres, setTalleres] = useState<TallerResponse[]>([])
@@ -19,15 +30,35 @@ export default function TalleresPage() {
   const [pageSize, setPageSize] = useState(10)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedTaller, setSelectedTaller] = useState<TallerResponse | null>(null)
+  const [currentFilters, setCurrentFilters] = useState<FilterParams>({})
 
-  const loadTalleres = async (page = 0, size = 10, search = "") => {
+  const tallerFilters = [
+    { key: "search", label: "Búsqueda General", type: "text" as const },
+    { key: "ciudad", label: "Ciudad", type: "text" as const },
+    {
+      key: "estado",
+      label: "Estado",
+      type: "select" as const,
+      options: [
+        { value: "ACTIVO", label: "Activo" },
+        { value: "SUSPENDIDO", label: "Suspendido" },
+        { value: "INACTIVO", label: "Inactivo" },
+      ],
+    },
+    { key: "fechaCreacionDesde", label: "Fecha Creación Desde", type: "date" as const },
+    { key: "fechaCreacionHasta", label: "Fecha Creación Hasta", type: "date" as const },
+    { key: "fechaActualizacionDesde", label: "Fecha Actualización Desde", type: "date" as const },
+    { key: "fechaActualizacionHasta", label: "Fecha Actualización Hasta", type: "date" as const },
+  ]
+
+  const loadTalleres = async (page = 0, size = 10, filters: FilterParams = {}) => {
     try {
       setIsLoading(true)
       const response = await talleresApi.filter({
         page,
         size,
-        search,
         sort: "nombre,asc",
+        ...filters,
       })
       setPagination(response)
       setTalleres(response.content)
@@ -40,12 +71,12 @@ export default function TalleresPage() {
   }
 
   useEffect(() => {
-    loadTalleres(currentPage, pageSize)
-  }, [currentPage, pageSize])
+    loadTalleres(currentPage, pageSize, currentFilters)
+  }, [currentPage, pageSize, currentFilters])
 
   const handleSearch = (search: string) => {
     setCurrentPage(0)
-    loadTalleres(0, pageSize, search)
+    loadTalleres(0, pageSize, { search })
   }
 
   const handlePageChange = (page: number) => {
@@ -62,7 +93,7 @@ export default function TalleresPage() {
       try {
         await talleresApi.delete(id)
         toast.success("Taller eliminado correctamente")
-        loadTalleres(currentPage, pageSize)
+        loadTalleres(currentPage, pageSize, currentFilters)
       } catch (error) {
         toast.error("Error al eliminar taller")
         console.error(error)
@@ -138,6 +169,18 @@ export default function TalleresPage() {
     </div>
   )
 
+  const handleApplyFilters = (filters: FilterParams) => {
+    setCurrentFilters(filters)
+    setCurrentPage(0)
+    loadTalleres(0, pageSize, filters)
+  }
+
+  const handleClearFilters = () => {
+    setCurrentFilters({})
+    setCurrentPage(0)
+    loadTalleres(0, pageSize, {})
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -146,15 +189,22 @@ export default function TalleresPage() {
             <h2 className="text-3xl font-bold tracking-tight">Talleres</h2>
             <p className="text-muted-foreground">Gestiona todos los talleres del sistema</p>
           </div>
-          <Button
-            onClick={() => {
-              setSelectedTaller(null)
-              setModalOpen(true)
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Taller
-          </Button>
+          <div className="flex gap-2">
+            <AdvancedFilters
+              filters={tallerFilters}
+              onApplyFilters={handleApplyFilters}
+              onClearFilters={handleClearFilters}
+            />
+            <Button
+              onClick={() => {
+                setSelectedTaller(null)
+                setModalOpen(true)
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Taller
+            </Button>
+          </div>
         </div>
 
         <DataTable
@@ -175,7 +225,7 @@ export default function TalleresPage() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         taller={selectedTaller}
-        onSuccess={() => loadTalleres(currentPage, pageSize)}
+        onSuccess={() => loadTalleres(currentPage, pageSize, currentFilters)}
       />
     </AdminLayout>
   )

@@ -106,6 +106,15 @@ export interface FilterParams {
   fechaCreacionHasta?: string
   fechaActualizacionDesde?: string
   fechaActualizacionHasta?: string
+  // Filtros específicos para clientes
+  tallerAsignadoId?: number
+  telefono?: string
+  // Filtros específicos para trabajadores
+  especialidad?: string
+  tallerId?: number
+  // Filtros específicos para talleres
+  ciudad?: string
+  estado?: string
   page?: number
   size?: number
   sort?: string

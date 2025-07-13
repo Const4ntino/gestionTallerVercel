@@ -66,15 +66,19 @@ export function ClienteFormModal({ open, onOpenChange, cliente, onSuccess }: Cli
         talleresApi.getAll(),
       ])
 
-      // Filtrar usuarios que no tienen cliente asignado
-      const usuariosSinCliente = usuariosResponse.content.filter(
-        (usuario) => !cliente || usuario.id === cliente.usuario.id,
-      )
+      // Filtrar usuarios que no tienen cliente asignado o es el cliente actual
+      let usuariosSinCliente = usuariosResponse.content
+
+      // Si estamos editando, incluir el usuario actual
+      if (cliente) {
+        usuariosSinCliente = usuariosResponse.content.filter((usuario) => usuario.id === cliente.usuario.id)
+      }
 
       setUsuarios(usuariosSinCliente)
       setTalleres(talleresResponse)
     } catch (error) {
       console.error("Error al cargar datos:", error)
+      toast.error("Error al cargar los datos del formulario")
     }
   }
 

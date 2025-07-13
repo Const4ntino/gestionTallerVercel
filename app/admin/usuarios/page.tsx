@@ -10,6 +10,8 @@ import { usuariosApi } from "@/lib/admin-api"
 import type { UsuarioResponse, PageResponse } from "@/types/admin"
 import { toast } from "sonner"
 import { UsuarioFormModal } from "@/components/admin/forms/usuario-form-modal"
+import { AdvancedFilters } from "@/components/admin/advanced-filters"
+import type { FilterParams } from "@/types/utils"
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
@@ -19,15 +21,35 @@ export default function UsuariosPage() {
   const [pageSize, setPageSize] = useState(10)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedUsuario, setSelectedUsuario] = useState<UsuarioResponse | null>(null)
+  const [currentFilters, setCurrentFilters] = useState<FilterParams>({})
 
-  const loadUsuarios = async (page = 0, size = 10, search = "") => {
+  const userFilters = [
+    { key: "search", label: "Búsqueda General", type: "text" as const },
+    {
+      key: "rol",
+      label: "Rol",
+      type: "select" as const,
+      options: [
+        { value: "ADMINISTRADOR", label: "Administrador" },
+        { value: "ADMINISTRADOR_TALLER", label: "Administrador de Taller" },
+        { value: "TRABAJADOR", label: "Trabajador" },
+        { value: "CLIENTE", label: "Cliente" },
+      ],
+    },
+    { key: "fechaCreacionDesde", label: "Fecha Creación Desde", type: "date" as const },
+    { key: "fechaCreacionHasta", label: "Fecha Creación Hasta", type: "date" as const },
+    { key: "fechaActualizacionDesde", label: "Fecha Actualización Desde", type: "date" as const },
+    { key: "fechaActualizacionHasta", label: "Fecha Actualización Hasta", type: "date" as const },
+  ]
+
+  const loadUsuarios = async (page = 0, size = 10, filters: FilterParams = {}) => {
     try {
       setIsLoading(true)
       const response = await usuariosApi.filter({
         page,
         size,
-        search,
         sort: "fechaCreacion,desc",
+        ...filters,
       })
       setPagination(response)
       setUsuarios(response.content)
@@ -40,12 +62,14 @@ export default function UsuariosPage() {
   }
 
   useEffect(() => {
-    loadUsuarios(currentPage, pageSize)
-  }, [currentPage, pageSize])
+    loadUsuarios(currentPage, pageSize, currentFilters)
+  }, [currentPage, pageSize, currentFilters])
 
   const handleSearch = (search: string) => {
+    const newFilters = { ...currentFilters, search }
+    setCurrentFilters(newFilters)
     setCurrentPage(0)
-    loadUsuarios(0, pageSize, search)
+    loadUsuarios(0, pageSize, newFilters)
   }
 
   const handlePageChange = (page: number) => {
@@ -62,7 +86,7 @@ export default function UsuariosPage() {
       try {
         await usuariosApi.delete(id)
         toast.success("Usuario eliminado correctamente")
-        loadUsuarios(currentPage, pageSize)
+        loadUsuarios(currentPage, pageSize, currentFilters)
       } catch (error) {
         toast.error("Error al eliminar usuario")
         console.error(error)
@@ -132,6 +156,18 @@ export default function UsuariosPage() {
     </div>
   )
 
+  const handleApplyFilters = (filters: FilterParams) => {
+    setCurrentFilters(filters)
+    setCurrentPage(0)
+    loadUsuarios(0, pageSize, filters)
+  }
+
+  const handleClearFilters = () => {
+    setCurrentFilters({})
+    setCurrentPage(0)
+    loadUsuarios(0, pageSize, {})
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -140,15 +176,22 @@ export default function UsuariosPage() {
             <h2 className="text-3xl font-bold tracking-tight">Usuarios</h2>
             <p className="text-muted-foreground">Gestiona todos los usuarios del sistema</p>
           </div>
-          <Button
-            onClick={() => {
-              setSelectedUsuario(null)
-              setModalOpen(true)
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Usuario
-          </Button>
+          <div className="flex gap-2">
+            <AdvancedFilters
+              filters={userFilters}
+              onApplyFilters={handleApplyFilters}
+              onClearFilters={handleClearFilters}
+            />
+            <Button
+              onClick={() => {
+                setSelectedUsuario(null)
+                setModalOpen(true)
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Usuario
+            </Button>
+          </div>
         </div>
 
         <DataTable
@@ -169,7 +212,7 @@ export default function UsuariosPage() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         usuario={selectedUsuario}
-        onSuccess={() => loadUsuarios(currentPage, pageSize)}
+        onSuccess={() => loadUsuarios(currentPage, pageSize, currentFilters)}
       />
     </AdminLayout>
   )

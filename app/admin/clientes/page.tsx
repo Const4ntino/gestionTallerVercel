@@ -5,10 +5,12 @@ import { AdminLayout } from "@/components/admin/admin-layout"
 import { DataTable } from "@/components/admin/data-table"
 import { Button } from "@/components/ui/button"
 import { Plus, Edit, Trash2, Phone, MapPin } from "lucide-react"
-import { clientesApi } from "@/lib/admin-api"
-import type { ClienteResponse, PageResponse } from "@/types/admin"
+import { clientesApi, talleresApi } from "@/lib/admin-api"
+import type { ClienteResponse, PageResponse, TallerResponse } from "@/types/admin"
 import { toast } from "sonner"
 import { ClienteFormModal } from "@/components/admin/forms/cliente-form-modal"
+import { AdvancedFilters } from "@/components/admin/advanced-filters"
+import type { FilterParams } from "@/types/utils"
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteResponse[]>([])
@@ -18,15 +20,44 @@ export default function ClientesPage() {
   const [pageSize, setPageSize] = useState(10)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedCliente, setSelectedCliente] = useState<ClienteResponse | null>(null)
+  const [currentFilters, setCurrentFilters] = useState<FilterParams>({})
+  const [talleres, setTalleres] = useState<TallerResponse[]>([])
 
-  const loadClientes = async (page = 0, size = 10, search = "") => {
+  useEffect(() => {
+    loadTalleres()
+  }, [])
+
+  const loadTalleres = async () => {
+    try {
+      const response = await talleresApi.getAll()
+      setTalleres(response)
+    } catch (error) {
+      console.error("Error al cargar talleres:", error)
+    }
+  }
+
+  const clienteFilters = [
+    { key: "search", label: "Búsqueda General", type: "text" as const },
+    { key: "telefono", label: "Teléfono", type: "text" as const },
+    { key: "fechaCreacionDesde", label: "Fecha Creación Desde", type: "date" as const },
+    { key: "fechaCreacionHasta", label: "Fecha Creación Hasta", type: "date" as const },
+  ]
+
+  const additionalData = {
+    tallerAsignadoId: talleres.map((taller) => ({
+      value: taller.id.toString(),
+      label: `${taller.nombre} - ${taller.ciudad}`,
+    })),
+  }
+
+  const loadClientes = async (page = 0, size = 10, filters: FilterParams = {}) => {
     try {
       setIsLoading(true)
       const response = await clientesApi.filter({
         page,
         size,
-        search,
         sort: "fechaCreacion,desc",
+        ...filters,
       })
       setPagination(response)
       setClientes(response.content)
@@ -39,12 +70,12 @@ export default function ClientesPage() {
   }
 
   useEffect(() => {
-    loadClientes(currentPage, pageSize)
-  }, [currentPage, pageSize])
+    loadClientes(currentPage, pageSize, currentFilters)
+  }, [currentPage, pageSize, currentFilters])
 
   const handleSearch = (search: string) => {
     setCurrentPage(0)
-    loadClientes(0, pageSize, search)
+    loadClientes(0, pageSize, { search })
   }
 
   const handlePageChange = (page: number) => {
@@ -61,7 +92,7 @@ export default function ClientesPage() {
       try {
         await clientesApi.delete(id)
         toast.success("Cliente eliminado correctamente")
-        loadClientes(currentPage, pageSize)
+        loadClientes(currentPage, pageSize, currentFilters)
       } catch (error) {
         toast.error("Error al eliminar cliente")
         console.error(error)
@@ -137,6 +168,18 @@ export default function ClientesPage() {
     </div>
   )
 
+  const handleApplyFilters = (filters: FilterParams) => {
+    setCurrentFilters(filters)
+    setCurrentPage(0)
+    loadClientes(0, pageSize, filters)
+  }
+
+  const handleClearFilters = () => {
+    setCurrentFilters({})
+    setCurrentPage(0)
+    loadClientes(0, pageSize, {})
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -145,15 +188,30 @@ export default function ClientesPage() {
             <h2 className="text-3xl font-bold tracking-tight">Clientes</h2>
             <p className="text-muted-foreground">Gestiona todos los clientes del sistema</p>
           </div>
-          <Button
-            onClick={() => {
-              setSelectedCliente(null)
-              setModalOpen(true)
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Cliente
-          </Button>
+          <div className="flex gap-2">
+            <AdvancedFilters
+              filters={[
+                ...clienteFilters,
+                {
+                  key: "tallerAsignadoId",
+                  label: "Taller Asignado",
+                  type: "select" as const,
+                },
+              ]}
+              onApplyFilters={handleApplyFilters}
+              onClearFilters={handleClearFilters}
+              additionalData={additionalData}
+            />
+            <Button
+              onClick={() => {
+                setSelectedCliente(null)
+                setModalOpen(true)
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Cliente
+            </Button>
+          </div>
         </div>
 
         <DataTable
@@ -174,7 +232,7 @@ export default function ClientesPage() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         cliente={selectedCliente}
-        onSuccess={() => loadClientes(currentPage, pageSize)}
+        onSuccess={() => loadClientes(currentPage, pageSize, currentFilters)}
       />
     </AdminLayout>
   )
