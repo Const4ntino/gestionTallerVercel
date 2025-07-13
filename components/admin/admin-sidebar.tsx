@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Users, Wrench, UserCheck, Building2, LayoutDashboard, Menu, LogOut, Package } from "lucide-react"
+import { Users, Wrench, UserCheck, Building2, LayoutDashboard, Menu, LogOut, Package, Settings } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 
@@ -41,6 +41,11 @@ const navigation = [
     name: "Productos",
     href: "/admin/productos",
     icon: Package,
+  },
+  {
+    name: "Servicios",
+    href: "/admin/servicios",
+    icon: Settings,
   },
 ]
 
