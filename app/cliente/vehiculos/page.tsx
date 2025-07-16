@@ -1,244 +1,253 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DataTable } from "@/components/admin/data-table"
-import { VehiculoFormModal } from "@/components/cliente/vehiculo-form-modal"
-import { vehiculosApi } from "@/lib/vehiculos-api"
-import type { VehiculoResponse, VehiculoFilterParams } from "@/types/vehiculos"
-import { Plus, Car, Search, Filter } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Plus, Search, MoreHorizontal, Edit, Car } from "lucide-react"
 import { toast } from "sonner"
+import { obtenerMisVehiculos } from "@/lib/vehiculos-api"
+import { VehiculoFormModal } from "@/components/cliente/vehiculo-form-modal"
+import type { VehiculoResponse, VehiculoFilters } from "@/types/vehiculos"
 
 export default function MisVehiculosPage() {
-  const { user, isLoading } = useAuth()
-  const router = useRouter()
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
-  const [isLoadingVehiculos, setIsLoadingVehiculos] = useState(true)
-  const [showFormModal, setShowFormModal] = useState(false)
-  const [editingVehiculo, setEditingVehiculo] = useState<VehiculoResponse | null>(null)
-  const [filters, setFilters] = useState<VehiculoFilterParams>({
+  const [isLoading, setIsLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalElements, setTotalElements] = useState(0)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [filters, setFilters] = useState<VehiculoFilters>({
+    search: "",
+    estado: "",
     page: 0,
     size: 10,
-    sort: "fechaCreacion,desc",
-    estado: "ALL", // Updated default value to "ALL"
   })
-  const [pagination, setPagination] = useState({
-    totalPages: 0,
-    totalElements: 0,
-    currentPage: 0,
-  })
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedVehiculo, setSelectedVehiculo] = useState<VehiculoResponse | null>(null)
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login")
-    } else if (!isLoading && user && user.rol !== "CLIENTE") {
-      router.push("/dashboard")
-    }
-  }, [user, isLoading, router])
-
-  useEffect(() => {
-    if (user && user.rol === "CLIENTE") {
-      loadVehiculos()
-    }
-  }, [user, filters])
-
-  const loadVehiculos = async () => {
+  const cargarVehiculos = async () => {
+    setIsLoading(true)
     try {
-      setIsLoadingVehiculos(true)
-      const response = await vehiculosApi.getMisVehiculos(filters)
+      const response = await obtenerMisVehiculos(filters)
       setVehiculos(response.content)
-      setPagination({
-        totalPages: response.totalPages,
-        totalElements: response.totalElements,
-        currentPage: response.number,
-      })
+      setTotalPages(response.totalPages)
+      setTotalElements(response.totalElements)
+      setCurrentPage(response.number)
     } catch (error) {
-      console.error("Error al cargar vehículos:", error)
       toast.error("Error al cargar los vehículos")
+      console.error(error)
     } finally {
-      setIsLoadingVehiculos(false)
+      setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    cargarVehiculos()
+  }, [filters])
 
   const handleSearch = (search: string) => {
     setFilters((prev) => ({ ...prev, search, page: 0 }))
   }
 
-  const handleFilterChange = (key: keyof VehiculoFilterParams, value: any) => {
-    setFilters((prev) => ({ ...prev, [key]: value, page: 0 }))
+  const handleEstadoChange = (estado: string) => {
+    setFilters((prev) => ({ ...prev, estado: estado === "all" ? "" : estado, page: 0 }))
   }
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }))
   }
 
-  const handlePageSizeChange = (size: number) => {
-    setFilters((prev) => ({ ...prev, size, page: 0 }))
-  }
-
   const handleCreateVehiculo = () => {
-    setEditingVehiculo(null)
-    setShowFormModal(true)
+    setSelectedVehiculo(null)
+    setIsModalOpen(true)
   }
 
   const handleEditVehiculo = (vehiculo: VehiculoResponse) => {
-    setEditingVehiculo(vehiculo)
-    setShowFormModal(true)
+    setSelectedVehiculo(vehiculo)
+    setIsModalOpen(true)
   }
 
-  const handleFormSuccess = () => {
-    loadVehiculos()
-    setShowFormModal(false)
-    setEditingVehiculo(null)
+  const handleModalSuccess = () => {
+    cargarVehiculos()
   }
 
-  const columns = [
-    {
-      key: "placa",
-      header: "Placa",
-      render: (vehiculo: VehiculoResponse) => <div className="font-medium">{vehiculo.placa}</div>,
-    },
-    {
-      key: "marca",
-      header: "Marca",
-    },
-    {
-      key: "modelo",
-      header: "Modelo",
-    },
-    {
-      key: "anio",
-      header: "Año",
-    },
-    {
-      key: "tipoVehiculo",
-      header: "Tipo",
-    },
-    {
-      key: "estado",
-      header: "Estado",
-      render: (vehiculo: VehiculoResponse) => {
-        const estadoColors = {
-          ACTIVO: "bg-green-100 text-green-800",
-          INACTIVO: "bg-gray-100 text-gray-800",
-          EN_MANTENIMIENTO: "bg-yellow-100 text-yellow-800",
-        }
+  const getEstadoBadge = (estado: string) => {
+    switch (estado) {
+      case "ACTIVO":
         return (
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${estadoColors[vehiculo.estado as keyof typeof estadoColors] || "bg-gray-100 text-gray-800"}`}
-          >
-            {vehiculo.estado.replace("_", " ")}
-          </span>
+          <Badge variant="default" className="bg-green-500">
+            Activo
+          </Badge>
         )
-      },
-    },
-  ]
-
-  const actions = (vehiculo: VehiculoResponse) => (
-    <Button variant="outline" size="sm" onClick={() => handleEditVehiculo(vehiculo)}>
-      Editar
-    </Button>
-  )
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
-  if (!user || user.rol !== "CLIENTE") {
-    return null
+      case "INACTIVO":
+        return <Badge variant="secondary">Inactivo</Badge>
+      case "EN_MANTENIMIENTO":
+        return <Badge variant="destructive">En Mantenimiento</Badge>
+      default:
+        return <Badge variant="outline">{estado}</Badge>
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="container mx-auto py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Car className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold text-gray-900">Mis Vehículos</h1>
-          </div>
-          <p className="text-gray-600">Gestiona tus vehículos registrados</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Mis Vehículos</h1>
+          <p className="text-muted-foreground">Gestiona tus vehículos registrados en el taller</p>
         </div>
-
-        {/* Main Content */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <CardTitle>Lista de Vehículos</CardTitle>
-                <CardDescription>Aquí puedes ver y gestionar todos tus vehículos registrados</CardDescription>
-              </div>
-              <Button onClick={handleCreateVehiculo} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Registrar Nuevo Vehículo
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por placa, marca o modelo..."
-                    className="pl-8"
-                    onChange={(e) => handleSearch(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Select
-                  value={filters.estado || "ALL"}
-                  onValueChange={(value) => handleFilterChange("estado", value || "ALL")}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Filtrar por estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todos los estados</SelectItem>
-                    <SelectItem value="ACTIVO">Activo</SelectItem>
-                    <SelectItem value="INACTIVO">Inactivo</SelectItem>
-                    <SelectItem value="EN_MANTENIMIENTO">En Mantenimiento</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Table */}
-            <DataTable
-              data={vehiculos}
-              columns={columns}
-              totalPages={pagination.totalPages}
-              currentPage={pagination.currentPage}
-              totalElements={pagination.totalElements}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-              pageSize={filters.size || 10}
-              isLoading={isLoadingVehiculos}
-              actions={actions}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Form Modal */}
-        <VehiculoFormModal
-          open={showFormModal}
-          onOpenChange={setShowFormModal}
-          vehiculo={editingVehiculo}
-          onSuccess={handleFormSuccess}
-        />
+        <Button onClick={handleCreateVehiculo}>
+          <Plus className="mr-2 h-4 w-4" />
+          Registrar Vehículo
+        </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Car className="h-5 w-5" />
+            Lista de Vehículos
+          </CardTitle>
+          <CardDescription>
+            {totalElements > 0
+              ? `Mostrando ${vehiculos.length} de ${totalElements} vehículos`
+              : "No tienes vehículos registrados"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por placa, marca o modelo..."
+                value={filters.search || ""}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Select value={filters.estado || "all"} onValueChange={handleEstadoChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="ACTIVO">Activo</SelectItem>
+                <SelectItem value="INACTIVO">Inactivo</SelectItem>
+                <SelectItem value="EN_MANTENIMIENTO">En Mantenimiento</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : vehiculos.length === 0 ? (
+            <div className="text-center py-12">
+              <Car className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">No hay vehículos</h3>
+              <p className="text-muted-foreground">
+                {filters.search || filters.estado
+                  ? "No se encontraron vehículos con los filtros aplicados."
+                  : "Comienza registrando tu primer vehículo."}
+              </p>
+              {!filters.search && !filters.estado && (
+                <Button onClick={handleCreateVehiculo} className="mt-4">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Registrar Primer Vehículo
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Placa</TableHead>
+                      <TableHead>Marca</TableHead>
+                      <TableHead>Modelo</TableHead>
+                      <TableHead>Año</TableHead>
+                      <TableHead>Motor</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="w-[70px]">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {vehiculos.map((vehiculo) => (
+                      <TableRow key={vehiculo.id}>
+                        <TableCell className="font-medium">{vehiculo.placa}</TableCell>
+                        <TableCell>{vehiculo.marca || "-"}</TableCell>
+                        <TableCell>{vehiculo.modelo || "-"}</TableCell>
+                        <TableCell>{vehiculo.anio || "-"}</TableCell>
+                        <TableCell>{vehiculo.motor || "-"}</TableCell>
+                        <TableCell>{vehiculo.tipoVehiculo || "-"}</TableCell>
+                        <TableCell>{getEstadoBadge(vehiculo.estado)}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menú</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditVehiculo(vehiculo)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between space-x-2 py-4">
+                  <div className="text-sm text-muted-foreground">
+                    Página {currentPage + 1} de {totalPages}
+                  </div>
+                  <div className="space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 0}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages - 1}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <VehiculoFormModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        vehiculo={selectedVehiculo}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   )
 }

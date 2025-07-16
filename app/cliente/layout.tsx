@@ -1,13 +1,13 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
+import { ClienteLayout } from "@/components/cliente/cliente-layout"
 
-export default function ClienteLayout({
+export default function ClienteLayoutPage({
   children,
 }: {
   children: React.ReactNode
@@ -35,5 +35,5 @@ export default function ClienteLayout({
     return null
   }
 
-  return <>{children}</>
+  return <ClienteLayout>{children}</ClienteLayout>
 }

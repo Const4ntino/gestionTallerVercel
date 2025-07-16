@@ -1,8 +1,9 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
 import {
   Dialog,
   DialogContent,
@@ -11,14 +12,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2 } from "lucide-react"
-import { vehiculosApi } from "@/lib/vehiculos-api"
-import type { VehiculoResponse, VehiculoClientRequest } from "@/types/vehiculos"
 import { toast } from "sonner"
+import { crearVehiculo, actualizarVehiculo } from "@/lib/vehiculos-api"
+import type { VehiculoResponse } from "@/types/vehiculos"
+
+const vehiculoSchema = z.object({
+  placa: z.string().min(1, "La placa es requerida"),
+  marca: z.string().optional(),
+  modelo: z.string().optional(),
+  anio: z
+    .number()
+    .min(1900, "Año inválido")
+    .max(new Date().getFullYear() + 1, "Año inválido")
+    .optional(),
+  motor: z.string().optional(),
+  tipoVehiculo: z.string().optional(),
+  estado: z.enum(["ACTIVO", "INACTIVO", "EN_MANTENIMIENTO"]),
+})
+
+type VehiculoFormData = z.infer<typeof vehiculoSchema>
 
 interface VehiculoFormModalProps {
   open: boolean
@@ -29,201 +45,202 @@ interface VehiculoFormModalProps {
 
 export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: VehiculoFormModalProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState<VehiculoClientRequest>({
-    placa: "",
-    marca: "",
-    modelo: "",
-    anio: new Date().getFullYear(),
-    motor: "",
-    tipoVehiculo: "",
-    estado: "ACTIVO",
+  const isEditing = !!vehiculo
+
+  const form = useForm<VehiculoFormData>({
+    resolver: zodResolver(vehiculoSchema),
+    defaultValues: {
+      placa: "",
+      marca: "",
+      modelo: "",
+      anio: new Date().getFullYear(),
+      motor: "",
+      tipoVehiculo: "",
+      estado: "ACTIVO",
+    },
   })
 
   useEffect(() => {
-    if (open) {
-      if (vehiculo) {
-        setFormData({
-          placa: vehiculo.placa,
-          marca: vehiculo.marca,
-          modelo: vehiculo.modelo,
-          anio: vehiculo.anio,
-          motor: vehiculo.motor,
-          tipoVehiculo: vehiculo.tipoVehiculo,
-          estado: vehiculo.estado as "ACTIVO" | "INACTIVO" | "EN_MANTENIMIENTO",
-        })
-      } else {
-        setFormData({
-          placa: "",
-          marca: "",
-          modelo: "",
-          anio: new Date().getFullYear(),
-          motor: "",
-          tipoVehiculo: "",
-          estado: "ACTIVO",
-        })
-      }
+    if (vehiculo) {
+      form.reset({
+        placa: vehiculo.placa,
+        marca: vehiculo.marca || "",
+        modelo: vehiculo.modelo || "",
+        anio: vehiculo.anio || new Date().getFullYear(),
+        motor: vehiculo.motor || "",
+        tipoVehiculo: vehiculo.tipoVehiculo || "",
+        estado: vehiculo.estado as "ACTIVO" | "INACTIVO" | "EN_MANTENIMIENTO",
+      })
+    } else {
+      form.reset({
+        placa: "",
+        marca: "",
+        modelo: "",
+        anio: new Date().getFullYear(),
+        motor: "",
+        tipoVehiculo: "",
+        estado: "ACTIVO",
+      })
     }
-  }, [open, vehiculo])
+  }, [vehiculo, form])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (data: VehiculoFormData) => {
     setIsLoading(true)
-
     try {
-      if (vehiculo) {
-        await vehiculosApi.update(vehiculo.id, formData)
+      if (isEditing && vehiculo) {
+        await actualizarVehiculo(vehiculo.id, data)
         toast.success("Vehículo actualizado correctamente")
       } else {
-        await vehiculosApi.create(formData)
-        toast.success("Vehículo registrado correctamente")
+        await crearVehiculo(data)
+        toast.success("Vehículo creado correctamente")
       }
-
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      console.error("Error al guardar vehículo:", error)
-      toast.error(vehiculo ? "Error al actualizar vehículo" : "Error al registrar vehículo")
+      toast.error(error instanceof Error ? error.message : "Error al guardar el vehículo")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleChange = (field: keyof VehiculoClientRequest, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const tiposVehiculo = [
-    "Sedan",
-    "SUV",
-    "Hatchback",
-    "Pickup",
-    "Coupe",
-    "Convertible",
-    "Wagon",
-    "Van",
-    "Camión",
-    "Motocicleta",
-  ]
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{vehiculo ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}</DialogTitle>
+          <DialogTitle>{isEditing ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}</DialogTitle>
           <DialogDescription>
-            {vehiculo ? "Modifica los datos de tu vehículo." : "Completa los datos para registrar un nuevo vehículo."}
+            {isEditing ? "Modifica los datos de tu vehículo." : "Completa los datos para registrar un nuevo vehículo."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="placa">Placa *</Label>
-              <Input
-                id="placa"
-                value={formData.placa}
-                onChange={(e) => handleChange("placa", e.target.value)}
-                placeholder="ABC-123"
-                required
-                className="uppercase"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="estado">Estado *</Label>
-              <Select value={formData.estado} onValueChange={(value) => handleChange("estado", value)} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona el estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ACTIVO">Activo</SelectItem>
-                  <SelectItem value="INACTIVO">Inactivo</SelectItem>
-                  <SelectItem value="EN_MANTENIMIENTO">En Mantenimiento</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="marca">Marca</Label>
-              <Input
-                id="marca"
-                value={formData.marca}
-                onChange={(e) => handleChange("marca", e.target.value)}
-                placeholder="Toyota"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="modelo">Modelo</Label>
-              <Input
-                id="modelo"
-                value={formData.modelo}
-                onChange={(e) => handleChange("modelo", e.target.value)}
-                placeholder="Corolla"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="anio">Año</Label>
-              <Input
-                id="anio"
-                type="number"
-                value={formData.anio}
-                onChange={(e) => handleChange("anio", Number.parseInt(e.target.value))}
-                min="1900"
-                max={new Date().getFullYear() + 1}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="motor">Motor</Label>
-              <Input
-                id="motor"
-                value={formData.motor}
-                onChange={(e) => handleChange("motor", e.target.value)}
-                placeholder="1.8L"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tipoVehiculo">Tipo de Vehículo</Label>
-            <Select value={formData.tipoVehiculo} onValueChange={(value) => handleChange("tipoVehiculo", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona el tipo de vehículo" />
-              </SelectTrigger>
-              <SelectContent>
-                {tiposVehiculo.map((tipo) => (
-                  <SelectItem key={tipo} value={tipo}>
-                    {tipo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {vehiculo ? "Actualizando..." : "Registrando..."}
-                </>
-              ) : vehiculo ? (
-                "Actualizar"
-              ) : (
-                "Registrar"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="placa"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Placa *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="ABC-123" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </Button>
-          </DialogFooter>
-        </form>
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="marca"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marca</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Toyota" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="modelo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modelo</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Corolla" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="anio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Año</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="2023"
+                        {...field}
+                        onChange={(e) => field.onChange(Number.parseInt(e.target.value) || undefined)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="motor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Motor</FormLabel>
+                    <FormControl>
+                      <Input placeholder="1.8L" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="tipoVehiculo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Vehículo</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Sedan, SUV, Hatchback..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="estado"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Estado *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona el estado" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="ACTIVO">Activo</SelectItem>
+                      <SelectItem value="INACTIVO">Inactivo</SelectItem>
+                      <SelectItem value="EN_MANTENIMIENTO">En Mantenimiento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Guardando..." : isEditing ? "Actualizar" : "Crear"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )

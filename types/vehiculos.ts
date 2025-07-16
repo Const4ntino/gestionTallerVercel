@@ -1,4 +1,3 @@
-// Tipos para el módulo de vehículos del cliente
 export interface VehiculoClientRequest {
   placa: string
   marca?: string
@@ -29,24 +28,39 @@ export interface VehiculoResponse {
   fechaActualizacion: string
 }
 
-export interface VehiculoFilterParams {
-  search?: string
-  estado?: "ACTIVO" | "INACTIVO" | "EN_MANTENIMIENTO"
-  page?: number
-  size?: number
-  sort?: string
-}
-
-export interface PageResponse<T> {
-  content: T[]
-  pageable: any
+export interface VehiculosPageResponse {
+  content: VehiculoResponse[]
+  pageable: {
+    sort: {
+      empty: boolean
+      sorted: boolean
+      unsorted: boolean
+    }
+    offset: number
+    pageSize: number
+    pageNumber: number
+    paged: boolean
+    unpaged: boolean
+  }
   totalPages: number
   totalElements: number
   last: boolean
   size: number
   number: number
-  sort: any
+  sort: {
+    empty: boolean
+    sorted: boolean
+    unsorted: boolean
+  }
   numberOfElements: number
   first: boolean
   empty: boolean
+}
+
+export interface VehiculoFilters {
+  search?: string
+  estado?: string
+  page?: number
+  size?: number
+  sort?: string
 }
