@@ -137,7 +137,12 @@ export function GestionFacturas() {
     {
       key: "cliente",
       label: "Cliente",
-      render: (factura: FacturaResponse) => factura.cliente.usuario.nombreCompleto,
+      render: (factura: FacturaResponse) => factura.cliente?.usuario?.nombreCompleto ?? "Sin cliente",
+    },
+    {
+      key: "taller",
+      label: "Taller",
+      render: (factura: FacturaResponse) => factura.taller?.nombre ?? "Sin taller",
     },
     {
       key: "vehiculo",
@@ -157,9 +162,9 @@ export function GestionFacturas() {
       render: (factura: FacturaResponse) => factura.mantenimiento.servicio.nombre,
     },
     {
-      key: "taller",
-      label: "Taller",
-      render: (factura: FacturaResponse) => factura.taller.nombre,
+      key: "detalles",
+      label: "Detalles",
+      render: (factura: FacturaResponse) => factura.detalles ?? "",
     },
     {
       key: "fechaEmision",
@@ -172,7 +177,7 @@ export function GestionFacturas() {
       render: (factura: FacturaResponse) => <span className="font-medium">{formatCurrency(factura.total)}</span>,
     },
     {
-      key: "actions",
+      key: "acciones",
       label: "Acciones",
       render: (factura: FacturaResponse) => (
         <div className="flex items-center gap-2">
@@ -323,28 +328,22 @@ export function GestionFacturas() {
       )}
 
       {/* Modal de detalles */}
-      {selectedFactura && (
-        <DetailsModal
-          open={showDetails}
-          onOpenChange={setShowDetails}
-          title={`Factura #${selectedFactura.id}`}
-          data={selectedFactura}
-          fields={[
-            { key: "id", label: "ID Factura", render: (value) => `#${value}` },
-            { key: "cliente.usuario.nombreCompleto", label: "Cliente" },
-            { key: "mantenimiento.vehiculo.placa", label: "Placa Vehículo" },
-            { key: "mantenimiento.vehiculo.marca", label: "Marca" },
-            { key: "mantenimiento.vehiculo.modelo", label: "Modelo" },
-            { key: "mantenimiento.servicio.nombre", label: "Servicio" },
-            { key: "mantenimiento.trabajador.usuario.nombreCompleto", label: "Trabajador" },
-            { key: "taller.nombre", label: "Taller" },
-            { key: "fechaEmision", label: "Fecha Emisión", render: (value) => formatDate(value) },
-            { key: "total", label: "Total", render: (value) => formatCurrency(value) },
-            { key: "detalles", label: "Detalles Adicionales" },
-            { key: "pdfUrl", label: "PDF", render: (value) => (value ? "Disponible" : "No disponible") },
-          ]}
-        />
-      )}
+      <DetailsModal
+        open={showDetails}
+        onOpenChange={setShowDetails}
+        title="Detalles de la Factura"
+        fields={selectedFactura ? [
+          { label: "ID", value: selectedFactura.id },
+          { label: "Cliente", value: selectedFactura.cliente?.usuario?.nombreCompleto },
+          { label: "Taller", value: selectedFactura.taller?.nombre },
+          { label: "Vehículo", value: selectedFactura.mantenimiento?.vehiculo?.placa },
+          { label: "Servicio", value: selectedFactura.mantenimiento?.servicio?.nombre },
+          { label: "Fecha Emisión", value: selectedFactura.fechaEmision, type: "date" },
+          { label: "Total", value: selectedFactura.total, type: "currency" },
+          { label: "Detalles", value: selectedFactura.detalles },
+          { label: "PDF", value: selectedFactura.pdfUrl ? "Disponible" : "No disponible", type: selectedFactura.pdfUrl ? "badge" : "text", variant: selectedFactura.pdfUrl ? "default" : "secondary" },
+        ] : []}
+      />
     </div>
   )
 }
