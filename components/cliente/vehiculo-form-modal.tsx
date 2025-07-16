@@ -12,16 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { crearVehiculo, actualizarVehiculo } from "@/lib/vehiculos-api"
-import type { VehiculoResponse } from "@/types/vehiculos"
+import { vehiculosApi } from "@/lib/vehiculos-api"
+import type { VehiculoResponse, VehiculoClientRequest } from "@/types/vehiculos"
 
 const vehiculoSchema = z.object({
-  placa: z.string().min(1, "La placa es requerida"),
+  placa: z.string().min(1, "La placa es requerida").max(10, "La placa no puede tener más de 10 caracteres"),
   marca: z.string().optional(),
   modelo: z.string().optional(),
   anio: z
@@ -34,8 +34,6 @@ const vehiculoSchema = z.object({
   estado: z.enum(["ACTIVO", "INACTIVO", "EN_MANTENIMIENTO"]),
 })
 
-type VehiculoFormData = z.infer<typeof vehiculoSchema>
-
 interface VehiculoFormModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -47,13 +45,13 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
   const [isLoading, setIsLoading] = useState(false)
   const isEditing = !!vehiculo
 
-  const form = useForm<VehiculoFormData>({
+  const form = useForm<VehiculoClientRequest>({
     resolver: zodResolver(vehiculoSchema),
     defaultValues: {
       placa: "",
       marca: "",
       modelo: "",
-      anio: new Date().getFullYear(),
+      anio: undefined,
       motor: "",
       tipoVehiculo: "",
       estado: "ACTIVO",
@@ -66,7 +64,7 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
         placa: vehiculo.placa,
         marca: vehiculo.marca || "",
         modelo: vehiculo.modelo || "",
-        anio: vehiculo.anio || new Date().getFullYear(),
+        anio: vehiculo.anio || undefined,
         motor: vehiculo.motor || "",
         tipoVehiculo: vehiculo.tipoVehiculo || "",
         estado: vehiculo.estado as "ACTIVO" | "INACTIVO" | "EN_MANTENIMIENTO",
@@ -76,7 +74,7 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
         placa: "",
         marca: "",
         modelo: "",
-        anio: new Date().getFullYear(),
+        anio: undefined,
         motor: "",
         tipoVehiculo: "",
         estado: "ACTIVO",
@@ -84,19 +82,20 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
     }
   }, [vehiculo, form])
 
-  const onSubmit = async (data: VehiculoFormData) => {
+  const onSubmit = async (data: VehiculoClientRequest) => {
     setIsLoading(true)
     try {
       if (isEditing && vehiculo) {
-        await actualizarVehiculo(vehiculo.id, data)
+        await vehiculosApi.updateVehiculo(vehiculo.id, data)
         toast.success("Vehículo actualizado correctamente")
       } else {
-        await crearVehiculo(data)
-        toast.success("Vehículo creado correctamente")
+        await vehiculosApi.createVehiculo(data)
+        toast.success("Vehículo registrado correctamente")
       }
       onSuccess()
       onOpenChange(false)
     } catch (error) {
+      console.error("Error al guardar vehículo:", error)
       toast.error(error instanceof Error ? error.message : "Error al guardar el vehículo")
     } finally {
       setIsLoading(false)
@@ -109,10 +108,9 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar Vehículo" : "Registrar Nuevo Vehículo"}</DialogTitle>
           <DialogDescription>
-            {isEditing ? "Modifica los datos de tu vehículo." : "Completa los datos para registrar un nuevo vehículo."}
+            {isEditing ? "Modifica los datos de tu vehículo." : "Completa los datos para registrar tu vehículo."}
           </DialogDescription>
         </DialogHeader>
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -171,7 +169,7 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
                         type="number"
                         placeholder="2023"
                         {...field}
-                        onChange={(e) => field.onChange(Number.parseInt(e.target.value) || undefined)}
+                        onChange={(e) => field.onChange(e.target.value ? Number.parseInt(e.target.value) : undefined)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -232,11 +230,11 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
             />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Guardando..." : isEditing ? "Actualizar" : "Crear"}
+                {isLoading ? "Guardando..." : isEditing ? "Actualizar" : "Registrar"}
               </Button>
             </DialogFooter>
           </form>

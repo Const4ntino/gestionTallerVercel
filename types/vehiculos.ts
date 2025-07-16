@@ -1,13 +1,3 @@
-export interface VehiculoClientRequest {
-  placa: string
-  marca?: string
-  modelo?: string
-  anio?: number
-  motor?: string
-  tipoVehiculo?: string
-  estado: "ACTIVO" | "INACTIVO" | "EN_MANTENIMIENTO"
-}
-
 export interface VehiculoResponse {
   id: number
   cliente: {
@@ -28,8 +18,26 @@ export interface VehiculoResponse {
   fechaActualizacion: string
 }
 
-export interface VehiculosPageResponse {
-  content: VehiculoResponse[]
+export interface VehiculoClientRequest {
+  placa: string
+  marca?: string
+  modelo?: string
+  anio?: number
+  motor?: string
+  tipoVehiculo?: string
+  estado: "ACTIVO" | "INACTIVO" | "EN_MANTENIMIENTO"
+}
+
+export interface VehiculoFilters {
+  search?: string
+  estado?: string
+  page: number
+  size: number
+  sort?: string
+}
+
+export interface PageResponse<T> {
+  content: T[]
   pageable: {
     sort: {
       empty: boolean
@@ -55,12 +63,4 @@ export interface VehiculosPageResponse {
   numberOfElements: number
   first: boolean
   empty: boolean
-}
-
-export interface VehiculoFilters {
-  search?: string
-  estado?: string
-  page?: number
-  size?: number
-  sort?: string
 }

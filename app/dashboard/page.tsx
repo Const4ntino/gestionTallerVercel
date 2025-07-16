@@ -3,27 +3,37 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { UserInfoCard } from "@/components/auth/user-info-card"
-import { Loader2 } from "lucide-react"
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && user) {
+      // Redirigir según el rol del usuario
+      switch (user.rol) {
+        case "ADMINISTRADOR":
+          router.push("/admin")
+          break
+        case "CLIENTE":
+          router.push("/cliente/vehiculos")
+          break
+        case "TRABAJADOR":
+          router.push("/trabajador")
+          break
+        default:
+          // Si no tiene un rol reconocido, mantener en dashboard
+          break
+      }
+    } else if (!isLoading && !user) {
       router.push("/login")
-    } else if (!isLoading && user && user.rol === "ADMINISTRADOR") {
-      router.push("/admin")
-    } else if (!isLoading && user && user.rol === "CLIENTE") {
-      router.push("/cliente/vehiculos")
     }
   }, [user, isLoading, router])
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -33,13 +43,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
-      <div className="container mx-auto py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard - Taller Mecánico</h1>
-          <p className="text-gray-600">Panel de control del sistema</p>
-        </div>
-        <UserInfoCard />
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Bienvenido, {user.nombreCompleto}</h1>
+        <p className="text-muted-foreground">Redirigiendo al panel correspondiente...</p>
       </div>
     </div>
   )
