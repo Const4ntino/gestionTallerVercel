@@ -9,17 +9,18 @@ export default function Loading() {
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-64" />
         </div>
-        <Skeleton className="h-10 w-40" />
+        <Skeleton className="h-10 w-48" />
       </div>
 
       <Card>
         <CardHeader>
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-56" />
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-4 mb-6">
             <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-[200px]" />
             <Skeleton className="h-10 w-[180px]" />
           </div>
           <div className="space-y-3">

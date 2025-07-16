@@ -9,8 +9,12 @@ export default function DashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login")
+      return
+    }
+
     if (!isLoading && user) {
-      // Redirigir según el rol del usuario
       switch (user.rol) {
         case "ADMINISTRADOR":
           router.push("/admin")
@@ -22,11 +26,8 @@ export default function DashboardPage() {
           router.push("/trabajador")
           break
         default:
-          // Si no tiene un rol reconocido, mantener en dashboard
-          break
+          router.push("/login")
       }
-    } else if (!isLoading && !user) {
-      router.push("/login")
     }
   }, [user, isLoading, router])
 
@@ -38,16 +39,9 @@ export default function DashboardPage() {
     )
   }
 
-  if (!user) {
-    return null
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Bienvenido, {user.nombreCompleto}</h1>
-        <p className="text-muted-foreground">Redirigiendo al panel correspondiente...</p>
-      </div>
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
     </div>
   )
 }

@@ -13,7 +13,7 @@ export interface VehiculoResponse {
   anio: number
   motor: string
   tipoVehiculo: string
-  estado: string
+  estado: "ACTIVO" | "INACTIVO" | "EN_MANTENIMIENTO"
   fechaCreacion: string
   fechaActualizacion: string
 }
@@ -31,36 +31,19 @@ export interface VehiculoClientRequest {
 export interface VehiculoFilters {
   search?: string
   estado?: string
-  page: number
-  size: number
+  page?: number
+  size?: number
   sort?: string
 }
 
 export interface PageResponse<T> {
   content: T[]
-  pageable: {
-    sort: {
-      empty: boolean
-      sorted: boolean
-      unsorted: boolean
-    }
-    offset: number
-    pageSize: number
-    pageNumber: number
-    paged: boolean
-    unpaged: boolean
-  }
+  pageable: any
   totalPages: number
   totalElements: number
-  last: boolean
   size: number
   number: number
-  sort: {
-    empty: boolean
-    sorted: boolean
-    unsorted: boolean
-  }
-  numberOfElements: number
   first: boolean
+  last: boolean
   empty: boolean
 }

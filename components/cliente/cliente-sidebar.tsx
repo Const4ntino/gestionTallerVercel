@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -35,6 +35,12 @@ const navigation = [
 function SidebarContent() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    logout()
+    router.push("/login")
+  }
 
   return (
     <div className="flex h-full max-h-screen flex-col gap-2">
@@ -73,7 +79,7 @@ function SidebarContent() {
             <p className="font-medium">{user?.nombreCompleto}</p>
             <p className="text-muted-foreground">CLIENTE</p>
           </div>
-          <Button variant="outline" size="sm" onClick={logout} className="justify-start bg-transparent">
+          <Button variant="outline" size="sm" onClick={handleLogout} className="justify-start bg-transparent">
             <LogOut className="mr-2 h-4 w-4" />
             Cerrar Sesión
           </Button>
@@ -94,12 +100,12 @@ export function ClienteSidebar() {
       {/* Mobile Sidebar */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="shrink-0 md:hidden bg-transparent">
+          <Button variant="outline" size="icon" className="shrink-0 md:hidden bg-transparent fixed top-4 left-4 z-40">
             <Menu className="h-5 w-5" />
             <span className="sr-only">Toggle navigation menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="flex flex-col">
+        <SheetContent side="left" className="flex flex-col p-0">
           <SidebarContent />
         </SheetContent>
       </Sheet>

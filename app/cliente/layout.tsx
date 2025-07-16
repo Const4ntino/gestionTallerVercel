@@ -16,12 +16,10 @@ export default function ClienteLayoutPage({
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        router.push("/login")
-      } else if (user.rol !== "CLIENTE") {
-        router.push("/dashboard")
-      }
+    if (!isLoading && !user) {
+      router.push("/login")
+    } else if (!isLoading && user && user.rol !== "CLIENTE") {
+      router.push("/dashboard")
     }
   }, [user, isLoading, router])
 

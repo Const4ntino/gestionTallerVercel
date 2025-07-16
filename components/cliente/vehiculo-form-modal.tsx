@@ -17,18 +17,14 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { vehiculosApi } from "@/lib/vehiculos-api"
+import { crearVehiculo, actualizarVehiculo } from "@/lib/vehiculos-api"
 import type { VehiculoResponse, VehiculoClientRequest } from "@/types/vehiculos"
 
 const vehiculoSchema = z.object({
-  placa: z.string().min(1, "La placa es requerida").max(10, "La placa no puede tener más de 10 caracteres"),
+  placa: z.string().min(1, "La placa es requerida"),
   marca: z.string().optional(),
   modelo: z.string().optional(),
-  anio: z
-    .number()
-    .min(1900, "Año inválido")
-    .max(new Date().getFullYear() + 1, "Año inválido")
-    .optional(),
+  anio: z.number().optional(),
   motor: z.string().optional(),
   tipoVehiculo: z.string().optional(),
   estado: z.enum(["ACTIVO", "INACTIVO", "EN_MANTENIMIENTO"]),
@@ -67,7 +63,7 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
         anio: vehiculo.anio || undefined,
         motor: vehiculo.motor || "",
         tipoVehiculo: vehiculo.tipoVehiculo || "",
-        estado: vehiculo.estado as "ACTIVO" | "INACTIVO" | "EN_MANTENIMIENTO",
+        estado: vehiculo.estado,
       })
     } else {
       form.reset({
@@ -86,17 +82,17 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
     setIsLoading(true)
     try {
       if (isEditing && vehiculo) {
-        await vehiculosApi.updateVehiculo(vehiculo.id, data)
+        await actualizarVehiculo(vehiculo.id, data)
         toast.success("Vehículo actualizado correctamente")
       } else {
-        await vehiculosApi.createVehiculo(data)
+        await crearVehiculo(data)
         toast.success("Vehículo registrado correctamente")
       }
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      console.error("Error al guardar vehículo:", error)
-      toast.error(error instanceof Error ? error.message : "Error al guardar el vehículo")
+      toast.error(isEditing ? "Error al actualizar vehículo" : "Error al registrar vehículo")
+      console.error(error)
     } finally {
       setIsLoading(false)
     }
@@ -111,6 +107,7 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
             {isEditing ? "Modifica los datos de tu vehículo." : "Completa los datos para registrar tu vehículo."}
           </DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -211,7 +208,7 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
               name="estado"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Estado *</FormLabel>
+                  <FormLabel>Estado</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
