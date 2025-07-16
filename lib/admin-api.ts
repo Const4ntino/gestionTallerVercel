@@ -13,7 +13,7 @@ import type {
   FilterParams,
 } from "@/types/admin"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://d3cfeb645d76.ngrok-free.app"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://4f95e785bfa1.ngrok-free.app"
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token")
