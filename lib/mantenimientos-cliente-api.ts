@@ -3,6 +3,7 @@ import type {
   MantenimientoRequestCliente,
   MantenimientoFiltersCliente,
   PageResponse,
+  TallerResponse,
 } from "@/types/mantenimientos-cliente"
 import type { VehiculoResponse } from "@/types/vehiculos"
 import type { ServicioResponse } from "@/types/servicios"
@@ -79,9 +80,23 @@ export const obtenerMisVehiculosParaMantenimiento = async (): Promise<VehiculoRe
   return data.content
 }
 
+export const obtenerTalleresDisponibles = async (): Promise<TallerResponse[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/talleres/filtrar?size=100&estado=ACTIVO`, {
+    headers: getAuthHeaders(),
+  })
+
+  if (!response.ok) {
+    throw new Error("Error al obtener talleres")
+  }
+
+  const data = await response.json()
+  return data.content || []
+}
+
 export const obtenerServiciosDisponibles = async (tallerId?: number): Promise<ServicioResponse[]> => {
   const searchParams = new URLSearchParams()
   if (tallerId) searchParams.append("tallerId", tallerId.toString())
+  searchParams.append("size", "100")
 
   const response = await fetch(`${API_BASE_URL}/api/servicios/filtrar?${searchParams}`, {
     headers: getAuthHeaders(),

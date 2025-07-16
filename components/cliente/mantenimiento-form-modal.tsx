@@ -21,17 +21,21 @@ import {
   crearMantenimiento,
   obtenerMisVehiculosParaMantenimiento,
   obtenerServiciosDisponibles,
+  obtenerTalleresDisponibles,
 } from "@/lib/mantenimientos-cliente-api"
-import type { MantenimientoRequestCliente } from "@/types/mantenimientos-cliente"
+import type { MantenimientoRequestCliente, TallerResponse } from "@/types/mantenimientos-cliente"
 import type { VehiculoResponse } from "@/types/vehiculos"
 import type { ServicioResponse } from "@/types/servicios"
 
 const mantenimientoSchema = z.object({
   vehiculoId: z.number().min(1, "Debe seleccionar un vehículo"),
+  tallerId: z.number().min(1, "Debe seleccionar un taller"),
   servicioId: z.number().min(1, "Debe seleccionar un servicio"),
   observacionesCliente: z.string().optional(),
   estado: z.literal("SOLICITADO"),
 })
+
+type FormData = z.infer<typeof mantenimientoSchema>
 
 interface MantenimientoFormModalProps {
   open: boolean
@@ -42,14 +46,18 @@ interface MantenimientoFormModalProps {
 export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: MantenimientoFormModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
+  const [talleres, setTalleres] = useState<TallerResponse[]>([])
   const [servicios, setServicios] = useState<ServicioResponse[]>([])
   const [loadingVehiculos, setLoadingVehiculos] = useState(false)
+  const [loadingTalleres, setLoadingTalleres] = useState(false)
   const [loadingServicios, setLoadingServicios] = useState(false)
+  const [selectedTallerId, setSelectedTallerId] = useState<number | null>(null)
 
-  const form = useForm<MantenimientoRequestCliente>({
+  const form = useForm<FormData>({
     resolver: zodResolver(mantenimientoSchema),
     defaultValues: {
       vehiculoId: 0,
+      tallerId: 0,
       servicioId: 0,
       observacionesCliente: "",
       estado: "SOLICITADO",
@@ -59,9 +67,22 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
   useEffect(() => {
     if (open) {
       cargarVehiculos()
-      cargarServicios()
+      cargarTalleres()
+      form.reset()
+      setSelectedTallerId(null)
+      setServicios([])
     }
-  }, [open])
+  }, [open, form])
+
+  useEffect(() => {
+    if (selectedTallerId) {
+      cargarServicios(selectedTallerId)
+      // Reset service selection when taller changes
+      form.setValue("servicioId", 0)
+    } else {
+      setServicios([])
+    }
+  }, [selectedTallerId, form])
 
   const cargarVehiculos = async () => {
     setLoadingVehiculos(true)
@@ -76,10 +97,23 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
     }
   }
 
-  const cargarServicios = async () => {
+  const cargarTalleres = async () => {
+    setLoadingTalleres(true)
+    try {
+      const data = await obtenerTalleresDisponibles()
+      setTalleres(data)
+    } catch (error) {
+      toast.error("Error al cargar talleres")
+      console.error(error)
+    } finally {
+      setLoadingTalleres(false)
+    }
+  }
+
+  const cargarServicios = async (tallerId: number) => {
     setLoadingServicios(true)
     try {
-      const data = await obtenerServiciosDisponibles()
+      const data = await obtenerServiciosDisponibles(tallerId)
       setServicios(data)
     } catch (error) {
       toast.error("Error al cargar servicios")
@@ -89,14 +123,18 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
     }
   }
 
-  const onSubmit = async (data: MantenimientoRequestCliente) => {
+  const onSubmit = async (data: FormData) => {
     setIsLoading(true)
     try {
-      await crearMantenimiento(data)
+      // Remove tallerId from the request as it's not part of the API
+      const { tallerId, ...requestData } = data
+      await crearMantenimiento(requestData as MantenimientoRequestCliente)
       toast.success("Solicitud de mantenimiento creada correctamente")
       onSuccess()
       onOpenChange(false)
       form.reset()
+      setSelectedTallerId(null)
+      setServicios([])
     } catch (error) {
       toast.error("Error al crear solicitud de mantenimiento")
       console.error(error)
@@ -146,15 +184,56 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
 
             <FormField
               control={form.control}
+              name="tallerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Taller *</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      const tallerId = Number.parseInt(value)
+                      field.onChange(tallerId)
+                      setSelectedTallerId(tallerId)
+                    }}
+                    disabled={loadingTalleres}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={loadingTalleres ? "Cargando talleres..." : "Selecciona el taller"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {talleres.map((taller) => (
+                        <SelectItem key={taller.id} value={taller.id.toString()}>
+                          {taller.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="servicioId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Servicio *</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(Number.parseInt(value))} disabled={loadingServicios}>
+                  <Select
+                    onValueChange={(value) => field.onChange(Number.parseInt(value))}
+                    disabled={loadingServicios || !selectedTallerId}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue
-                          placeholder={loadingServicios ? "Cargando servicios..." : "Selecciona el servicio"}
+                          placeholder={
+                            !selectedTallerId
+                              ? "Primero selecciona un taller"
+                              : loadingServicios
+                                ? "Cargando servicios..."
+                                : "Selecciona el servicio"
+                          }
                         />
                       </SelectTrigger>
                     </FormControl>

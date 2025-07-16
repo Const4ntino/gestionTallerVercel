@@ -4,26 +4,42 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Plus, Search, MoreHorizontal, Eye, FileText } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+import { Plus, Search, Eye, Car, Wrench, Calendar } from "lucide-react"
 import { toast } from "sonner"
-import { obtenerMisMantenimientos, obtenerMisVehiculosParaMantenimiento } from "@/lib/mantenimientos-cliente-api"
 import { MantenimientoFormModal } from "@/components/cliente/mantenimiento-form-modal"
 import { MantenimientoDetailsModal } from "@/components/cliente/mantenimiento-details-modal"
+import { obtenerMisMantenimientos, obtenerMisVehiculosParaMantenimiento } from "@/lib/mantenimientos-cliente-api"
 import type { MantenimientoResponseCliente, MantenimientoFiltersCliente } from "@/types/mantenimientos-cliente"
 import type { VehiculoResponse } from "@/types/vehiculos"
 
-export default function MisMantenimientosPage() {
+const estadoColors = {
+  SOLICITADO: "bg-blue-100 text-blue-800 border-blue-200",
+  EN_PROCESO: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  COMPLETADO: "bg-green-100 text-green-800 border-green-200",
+  PENDIENTE: "bg-orange-100 text-orange-800 border-orange-200",
+  CANCELADO: "bg-red-100 text-red-800 border-red-200",
+}
+
+export default function MantenimientosPage() {
   const [mantenimientos, setMantenimientos] = useState<MantenimientoResponseCliente[]>([])
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [totalPages, setTotalPages] = useState(0)
-  const [totalElements, setTotalElements] = useState(0)
-  const [currentPage, setCurrentPage] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [showFormModal, setShowFormModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedMantenimiento, setSelectedMantenimiento] = useState<MantenimientoResponseCliente | null>(null)
+
+  // Filtros y paginación
   const [filters, setFilters] = useState<MantenimientoFiltersCliente>({
     search: "",
     vehiculoId: undefined,
@@ -32,23 +48,26 @@ export default function MisMantenimientosPage() {
     size: 10,
     sort: "fechaCreacion,desc",
   })
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false)
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
-  const [selectedMantenimientoId, setSelectedMantenimientoId] = useState<number | null>(null)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalElements, setTotalElements] = useState(0)
+
+  useEffect(() => {
+    cargarMantenimientos()
+    cargarVehiculos()
+  }, [filters])
 
   const cargarMantenimientos = async () => {
-    setIsLoading(true)
+    setLoading(true)
     try {
       const response = await obtenerMisMantenimientos(filters)
       setMantenimientos(response.content)
       setTotalPages(response.totalPages)
       setTotalElements(response.totalElements)
-      setCurrentPage(response.number)
     } catch (error) {
-      toast.error("Error al cargar los mantenimientos")
+      toast.error("Error al cargar mantenimientos")
       console.error(error)
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
@@ -61,70 +80,29 @@ export default function MisMantenimientosPage() {
     }
   }
 
-  useEffect(() => {
-    cargarMantenimientos()
-  }, [filters])
-
-  useEffect(() => {
-    cargarVehiculos()
-  }, [])
-
-  const handleSearch = (search: string) => {
-    setFilters((prev) => ({ ...prev, search, page: 0 }))
+  const handleSearch = (value: string) => {
+    setFilters((prev) => ({ ...prev, search: value, page: 0 }))
   }
 
-  const handleVehiculoChange = (vehiculoId: string) => {
+  const handleVehiculoFilter = (value: string) => {
     setFilters((prev) => ({
       ...prev,
-      vehiculoId: vehiculoId === "all" ? undefined : Number.parseInt(vehiculoId),
+      vehiculoId: value === "all" ? undefined : Number.parseInt(value),
       page: 0,
     }))
   }
 
-  const handleEstadoChange = (estado: string) => {
-    setFilters((prev) => ({ ...prev, estado: estado === "all" ? "" : estado, page: 0 }))
+  const handleEstadoFilter = (value: string) => {
+    setFilters((prev) => ({ ...prev, estado: value, page: 0 }))
   }
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }))
   }
 
-  const handleCreateMantenimiento = () => {
-    setIsFormModalOpen(true)
-  }
-
-  const handleViewDetails = (mantenimientoId: number) => {
-    setSelectedMantenimientoId(mantenimientoId)
-    setIsDetailsModalOpen(true)
-  }
-
-  const handleFormSuccess = () => {
-    cargarMantenimientos()
-  }
-
-  const getEstadoBadge = (estado: string) => {
-    switch (estado) {
-      case "SOLICITADO":
-        return <Badge variant="secondary">Solicitado</Badge>
-      case "PENDIENTE":
-        return <Badge variant="outline">Pendiente</Badge>
-      case "EN_PROCESO":
-        return (
-          <Badge variant="default" className="bg-blue-500">
-            En Proceso
-          </Badge>
-        )
-      case "COMPLETADO":
-        return (
-          <Badge variant="default" className="bg-green-500">
-            Completado
-          </Badge>
-        )
-      case "CANCELADO":
-        return <Badge variant="destructive">Cancelado</Badge>
-      default:
-        return <Badge variant="outline">{estado}</Badge>
-    }
+  const handleVerDetalles = (mantenimiento: MantenimientoResponseCliente) => {
+    setSelectedMantenimiento(mantenimiento)
+    setShowDetailsModal(true)
   }
 
   const formatDate = (dateString: string) => {
@@ -137,43 +115,84 @@ export default function MisMantenimientosPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Mis Mantenimientos</h1>
-          <p className="text-muted-foreground">Gestiona las solicitudes de mantenimiento de tus vehículos</p>
+          <p className="text-muted-foreground">Gestiona y solicita mantenimientos para tus vehículos</p>
         </div>
-        <Button onClick={handleCreateMantenimiento}>
+        <Button onClick={() => setShowFormModal(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Solicitar Mantenimiento
         </Button>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <Wrench className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalElements}</div>
+            <p className="text-xs text-muted-foreground">mantenimientos</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Solicitados</CardTitle>
+            <Calendar className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{mantenimientos.filter((m) => m.estado === "SOLICITADO").length}</div>
+            <p className="text-xs text-muted-foreground">pendientes</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">En Proceso</CardTitle>
+            <Wrench className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{mantenimientos.filter((m) => m.estado === "EN_PROCESO").length}</div>
+            <p className="text-xs text-muted-foreground">activos</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completados</CardTitle>
+            <Car className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{mantenimientos.filter((m) => m.estado === "COMPLETADO").length}</div>
+            <p className="text-xs text-muted-foreground">finalizados</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filtros */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Lista de Mantenimientos
-          </CardTitle>
-          <CardDescription>
-            {totalElements > 0
-              ? `Mostrando ${mantenimientos.length} de ${totalElements} mantenimientos`
-              : "No tienes mantenimientos registrados"}
-          </CardDescription>
+          <CardTitle>Filtros</CardTitle>
+          <CardDescription>Filtra tus mantenimientos por diferentes criterios</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por placa, servicio u observaciones..."
-                value={filters.search || ""}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-8"
-              />
+          <div className="flex flex-col gap-4 md:flex-row">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por placa, servicio..."
+                  value={filters.search || ""}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
             </div>
-            <Select value={filters.vehiculoId?.toString() || "all"} onValueChange={handleVehiculoChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrar por vehículo" />
+            <Select value={filters.vehiculoId?.toString() || "all"} onValueChange={handleVehiculoFilter}>
+              <SelectTrigger className="w-full md:w-[200px]">
+                <SelectValue placeholder="Todos los vehículos" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los vehículos</SelectItem>
@@ -184,123 +203,126 @@ export default function MisMantenimientosPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filters.estado || "all"} onValueChange={handleEstadoChange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por estado" />
+            <Select value={filters.estado || "all"} onValueChange={handleEstadoFilter}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Todos los estados" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los estados</SelectItem>
                 <SelectItem value="SOLICITADO">Solicitado</SelectItem>
-                <SelectItem value="PENDIENTE">Pendiente</SelectItem>
                 <SelectItem value="EN_PROCESO">En Proceso</SelectItem>
                 <SelectItem value="COMPLETADO">Completado</SelectItem>
+                <SelectItem value="PENDIENTE">Pendiente</SelectItem>
                 <SelectItem value="CANCELADO">Cancelado</SelectItem>
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
 
-          {isLoading ? (
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
+      {/* Tabla de mantenimientos */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Mantenimientos</CardTitle>
+          <CardDescription>
+            Mostrando {mantenimientos.length} de {totalElements} mantenimientos
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Cargando mantenimientos...</div>
             </div>
           ) : mantenimientos.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No hay mantenimientos</h3>
-              <p className="text-muted-foreground">
-                {filters.search || filters.estado || filters.vehiculoId
-                  ? "No se encontraron mantenimientos con los filtros aplicados."
-                  : "Comienza solicitando tu primer mantenimiento."}
-              </p>
-              {!filters.search && !filters.estado && !filters.vehiculoId && (
-                <Button onClick={handleCreateMantenimiento} className="mt-4">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Solicitar Primer Mantenimiento
-                </Button>
-              )}
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Wrench className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold">No hay mantenimientos</h3>
+              <p className="text-muted-foreground mb-4">No tienes mantenimientos registrados aún.</p>
+              <Button onClick={() => setShowFormModal(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Solicitar Primer Mantenimiento
+              </Button>
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Vehículo</TableHead>
-                      <TableHead>Servicio</TableHead>
-                      <TableHead>Trabajador</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Fecha Solicitud</TableHead>
-                      <TableHead>Fecha Inicio</TableHead>
-                      <TableHead className="w-[70px]">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mantenimientos.map((mantenimiento) => (
-                      <TableRow key={mantenimiento.id}>
-                        <TableCell className="font-medium">
-                          <div>
-                            <p>{mantenimiento.vehiculo.placa}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {mantenimiento.vehiculo.marca} {mantenimiento.vehiculo.modelo}
-                            </p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Vehículo</TableHead>
+                    <TableHead>Servicio</TableHead>
+                    <TableHead>Taller</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Fecha Creación</TableHead>
+                    <TableHead>Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mantenimientos.map((mantenimiento) => (
+                    <TableRow key={mantenimiento.id}>
+                      <TableCell className="font-medium">#{mantenimiento.id}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{mantenimiento.vehiculo.placa}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {mantenimiento.vehiculo.marca} {mantenimiento.vehiculo.modelo}
                           </div>
-                        </TableCell>
-                        <TableCell>{mantenimiento.servicio.nombre}</TableCell>
-                        <TableCell>
-                          {mantenimiento.trabajador ? mantenimiento.trabajador.usuario.nombreCompleto : "No asignado"}
-                        </TableCell>
-                        <TableCell>{getEstadoBadge(mantenimiento.estado)}</TableCell>
-                        <TableCell>{formatDate(mantenimiento.fechaCreacion)}</TableCell>
-                        <TableCell>
-                          {mantenimiento.fechaInicio ? formatDate(mantenimiento.fechaInicio) : "No definida"}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Abrir menú</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleViewDetails(mantenimiento.id)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Ver Detalles
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{mantenimiento.servicio.nombre}</TableCell>
+                      <TableCell>{mantenimiento.servicio.taller.nombre}</TableCell>
+                      <TableCell>
+                        <Badge className={estadoColors[mantenimiento.estado]}>
+                          {mantenimiento.estado.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(mantenimiento.fechaCreacion)}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" onClick={() => handleVerDetalles(mantenimiento)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
+              {/* Paginación */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between space-x-2 py-4">
-                  <div className="text-sm text-muted-foreground">
-                    Página {currentPage + 1} de {totalPages}
-                  </div>
-                  <div className="space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 0}
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages - 1}
-                    >
-                      Siguiente
-                    </Button>
-                  </div>
+                <div className="mt-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => handlePageChange(Math.max(0, (filters.page || 0) - 1))}
+                          className={filters.page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        const pageNum = i + Math.max(0, (filters.page || 0) - 2)
+                        if (pageNum >= totalPages) return null
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(pageNum)}
+                              isActive={pageNum === filters.page}
+                              className="cursor-pointer"
+                            >
+                              {pageNum + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                      })}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => handlePageChange(Math.min(totalPages - 1, (filters.page || 0) + 1))}
+                          className={
+                            filters.page === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 </div>
               )}
             </>
@@ -308,12 +330,13 @@ export default function MisMantenimientosPage() {
         </CardContent>
       </Card>
 
-      <MantenimientoFormModal open={isFormModalOpen} onOpenChange={setIsFormModalOpen} onSuccess={handleFormSuccess} />
+      {/* Modales */}
+      <MantenimientoFormModal open={showFormModal} onOpenChange={setShowFormModal} onSuccess={cargarMantenimientos} />
 
       <MantenimientoDetailsModal
-        open={isDetailsModalOpen}
-        onOpenChange={setIsDetailsModalOpen}
-        mantenimientoId={selectedMantenimientoId}
+        open={showDetailsModal}
+        onOpenChange={setShowDetailsModal}
+        mantenimiento={selectedMantenimiento}
       />
     </div>
   )

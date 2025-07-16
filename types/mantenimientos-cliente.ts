@@ -53,3 +53,29 @@ export interface MantenimientoFiltersCliente {
   size?: number
   sort?: string
 }
+
+export interface TallerResponse {
+  id: number
+  nombre: string
+  direccion: string
+  telefono: string
+  email: string
+  estado: string
+}
+
+export interface PageResponse<T> {
+  content: T[]
+  pageable: {
+    pageNumber: number
+    pageSize: number
+    sort: {
+      sorted: boolean
+      unsorted: boolean
+    }
+  }
+  totalPages: number
+  totalElements: number
+  first: boolean
+  last: boolean
+  numberOfElements: number
+}
