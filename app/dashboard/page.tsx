@@ -15,6 +15,8 @@ export default function DashboardPage() {
       router.push("/login")
     } else if (!isLoading && user && user.rol === "ADMINISTRADOR") {
       router.push("/admin")
+    } else if (!isLoading && user && user.rol === "CLIENTE") {
+      router.push("/cliente/vehiculos")
     }
   }, [user, isLoading, router])
 
