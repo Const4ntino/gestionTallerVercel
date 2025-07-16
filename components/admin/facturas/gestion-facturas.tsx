@@ -180,7 +180,10 @@ export function GestionFacturas() {
             <Eye className="h-4 w-4" />
           </Button>
           {factura.pdfUrl && (
-            <Button variant="ghost" size="sm" onClick={() => window.open(factura.pdfUrl!, "_blank")}>
+            <Button variant="ghost" size="sm" onClick={() => {
+              const getFullPdfUrl = (url: string) => url.startsWith('http') ? url : `http://localhost:8080${url}`;
+              window.open(getFullPdfUrl(factura.pdfUrl!), "_blank");
+            }}>
               <Download className="h-4 w-4" />
             </Button>
           )}
