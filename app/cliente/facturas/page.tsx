@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { FacturaDetailsModal } from "@/components/cliente/factura-details-modal"
@@ -16,21 +16,24 @@ import {
   Receipt,
   Search,
   Filter,
-  ChevronDown,
   Eye,
   Download,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  Calendar,
+  DollarSign,
+  Hash,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 
 export default function MisFacturasPage() {
   const [facturas, setFacturas] = useState<FacturaClientePage | null>(null)
   const [loading, setLoading] = useState(true)
-  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [selectedFacturaId, setSelectedFacturaId] = useState<number | null>(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [filtrosDropdownOpen, setFiltrosDropdownOpen] = useState(false)
 
   // Estados para filtros
   const [filtros, setFiltros] = useState<FacturaClienteFilters>({
@@ -70,6 +73,12 @@ export default function MisFacturasPage() {
       size: 10,
       sort: "fechaEmision,desc",
     })
+    setFiltrosDropdownOpen(false)
+  }
+
+  const aplicarFiltros = () => {
+    cargarFacturas()
+    setFiltrosDropdownOpen(false)
   }
 
   const handleVerDetalles = (facturaId: number) => {
@@ -89,6 +98,20 @@ export default function MisFacturasPage() {
     setFiltros((prev) => ({ ...prev, page: newPage }))
   }
 
+  // Función para contar filtros activos
+  const contarFiltrosActivos = () => {
+    let count = 0
+    if (filtros.search) count++
+    if (filtros.mantenimientoId) count++
+    if (filtros.fechaEmisionDesde) count++
+    if (filtros.fechaEmisionHasta) count++
+    if (filtros.minTotal) count++
+    if (filtros.maxTotal) count++
+    return count
+  }
+
+  const filtrosActivos = contarFiltrosActivos()
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -102,114 +125,267 @@ export default function MisFacturasPage() {
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Barra de búsqueda y filtros */}
       <Card>
-        <Collapsible open={filtrosAbiertos} onOpenChange={setFiltrosAbiertos}>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filtros de Búsqueda
-                </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${filtrosAbiertos ? "rotate-180" : ""}`} />
-              </CardTitle>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="search">Búsqueda General</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Buscar Facturas</CardTitle>
+            <DropdownMenu open={filtrosDropdownOpen} onOpenChange={setFiltrosDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="relative bg-transparent">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filtros Avanzados
+                  {filtrosActivos > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                    >
+                      {filtrosActivos}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-96 p-0">
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Filtros de Búsqueda</h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFiltrosDropdownOpen(false)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Separator />
+
+                  {/* Búsqueda General */}
+                  <div className="space-y-2">
+                    <Label htmlFor="search" className="flex items-center gap-2 text-sm font-medium">
+                      <Search className="h-4 w-4" />
+                      Búsqueda General
+                    </Label>
                     <Input
                       id="search"
-                      placeholder="Placa, servicio..."
-                      className="pl-8"
+                      placeholder="Placa, servicio, taller..."
                       value={filtros.search || ""}
                       onChange={(e) => handleFiltroChange("search", e.target.value)}
                     />
                   </div>
-                </div>
 
-                <div>
-                  <Label htmlFor="mantenimientoId">ID Mantenimiento</Label>
-                  <Input
-                    id="mantenimientoId"
-                    type="number"
-                    placeholder="ID del mantenimiento"
-                    value={filtros.mantenimientoId || ""}
-                    onChange={(e) =>
-                      handleFiltroChange(
-                        "mantenimientoId",
-                        e.target.value ? Number.parseInt(e.target.value) : undefined,
-                      )
-                    }
-                  />
-                </div>
+                  {/* ID Mantenimiento */}
+                  <div className="space-y-2">
+                    <Label htmlFor="mantenimientoId" className="flex items-center gap-2 text-sm font-medium">
+                      <Hash className="h-4 w-4" />
+                      ID Mantenimiento
+                    </Label>
+                    <Input
+                      id="mantenimientoId"
+                      type="number"
+                      placeholder="ID del mantenimiento"
+                      value={filtros.mantenimientoId || ""}
+                      onChange={(e) =>
+                        handleFiltroChange(
+                          "mantenimientoId",
+                          e.target.value ? Number.parseInt(e.target.value) : undefined,
+                        )
+                      }
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="fechaDesde">Fecha Desde</Label>
-                  <Input
-                    id="fechaDesde"
-                    type="datetime-local"
-                    value={filtros.fechaEmisionDesde || ""}
-                    onChange={(e) => handleFiltroChange("fechaEmisionDesde", e.target.value)}
-                  />
-                </div>
+                  {/* Rango de Fechas */}
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <Calendar className="h-4 w-4" />
+                      Rango de Fechas
+                    </Label>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div>
+                        <Label htmlFor="fechaDesde" className="text-xs text-muted-foreground">
+                          Desde
+                        </Label>
+                        <Input
+                          id="fechaDesde"
+                          type="datetime-local"
+                          value={filtros.fechaEmisionDesde || ""}
+                          onChange={(e) => handleFiltroChange("fechaEmisionDesde", e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="fechaHasta" className="text-xs text-muted-foreground">
+                          Hasta
+                        </Label>
+                        <Input
+                          id="fechaHasta"
+                          type="datetime-local"
+                          value={filtros.fechaEmisionHasta || ""}
+                          onChange={(e) => handleFiltroChange("fechaEmisionHasta", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                <div>
-                  <Label htmlFor="fechaHasta">Fecha Hasta</Label>
-                  <Input
-                    id="fechaHasta"
-                    type="datetime-local"
-                    value={filtros.fechaEmisionHasta || ""}
-                    onChange={(e) => handleFiltroChange("fechaEmisionHasta", e.target.value)}
-                  />
-                </div>
+                  {/* Rango de Montos */}
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <DollarSign className="h-4 w-4" />
+                      Rango de Montos
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label htmlFor="minTotal" className="text-xs text-muted-foreground">
+                          Mínimo
+                        </Label>
+                        <Input
+                          id="minTotal"
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={filtros.minTotal || ""}
+                          onChange={(e) =>
+                            handleFiltroChange(
+                              "minTotal",
+                              e.target.value ? Number.parseFloat(e.target.value) : undefined,
+                            )
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="maxTotal" className="text-xs text-muted-foreground">
+                          Máximo
+                        </Label>
+                        <Input
+                          id="maxTotal"
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={filtros.maxTotal || ""}
+                          onChange={(e) =>
+                            handleFiltroChange(
+                              "maxTotal",
+                              e.target.value ? Number.parseFloat(e.target.value) : undefined,
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                <div>
-                  <Label htmlFor="minTotal">Monto Mínimo</Label>
-                  <Input
-                    id="minTotal"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={filtros.minTotal || ""}
-                    onChange={(e) =>
-                      handleFiltroChange("minTotal", e.target.value ? Number.parseFloat(e.target.value) : undefined)
-                    }
-                  />
-                </div>
+                  <Separator />
 
-                <div>
-                  <Label htmlFor="maxTotal">Monto Máximo</Label>
-                  <Input
-                    id="maxTotal"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={filtros.maxTotal || ""}
-                    onChange={(e) =>
-                      handleFiltroChange("maxTotal", e.target.value ? Number.parseFloat(e.target.value) : undefined)
-                    }
-                  />
+                  {/* Botones de acción */}
+                  <div className="flex gap-2">
+                    <Button onClick={aplicarFiltros} size="sm" className="flex-1">
+                      <Search className="h-4 w-4 mr-2" />
+                      Aplicar Filtros
+                    </Button>
+                    <Button onClick={limpiarFiltros} variant="outline" size="sm">
+                      <X className="h-4 w-4 mr-2" />
+                      Limpiar
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Búsqueda rápida */}
+          <div className="flex items-center space-x-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por placa, servicio, taller..."
+              value={filtros.search || ""}
+              onChange={(e) => handleFiltroChange("search", e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
 
-              <div className="flex gap-2">
-                <Button onClick={cargarFacturas} size="sm">
-                  <Search className="h-4 w-4 mr-2" />
-                  Buscar
-                </Button>
-                <Button onClick={limpiarFiltros} variant="outline" size="sm">
-                  Limpiar Filtros
-                </Button>
-              </div>
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
+          {/* Mostrar filtros activos */}
+          {filtrosActivos > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {filtros.search && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Búsqueda: {filtros.search}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 hover:bg-transparent"
+                    onClick={() => handleFiltroChange("search", "")}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              {filtros.mantenimientoId && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Mantenimiento: #{filtros.mantenimientoId}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 hover:bg-transparent"
+                    onClick={() => handleFiltroChange("mantenimientoId", undefined)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              {filtros.fechaEmisionDesde && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Desde: {new Date(filtros.fechaEmisionDesde).toLocaleDateString()}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 hover:bg-transparent"
+                    onClick={() => handleFiltroChange("fechaEmisionDesde", "")}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              {filtros.fechaEmisionHasta && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Hasta: {new Date(filtros.fechaEmisionHasta).toLocaleDateString()}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 hover:bg-transparent"
+                    onClick={() => handleFiltroChange("fechaEmisionHasta", "")}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              {filtros.minTotal && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Min: {formatearMoneda(filtros.minTotal)}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 hover:bg-transparent"
+                    onClick={() => handleFiltroChange("minTotal", undefined)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              {filtros.maxTotal && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Max: {formatearMoneda(filtros.maxTotal)}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 hover:bg-transparent"
+                    onClick={() => handleFiltroChange("maxTotal", undefined)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+            </div>
+          )}
+        </CardContent>
       </Card>
 
       {/* Tabla de Facturas */}
@@ -232,6 +408,7 @@ export default function MisFacturasPage() {
                       <TableHead>Fecha</TableHead>
                       <TableHead>Vehículo</TableHead>
                       <TableHead>Servicio</TableHead>
+                      <TableHead>Taller</TableHead>
                       <TableHead>Total</TableHead>
                       <TableHead>PDF</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
@@ -245,10 +422,19 @@ export default function MisFacturasPage() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{factura.mantenimiento.vehiculo.placa}</p>
-                            <p className="text-sm text-muted-foreground">{factura.mantenimiento.vehiculo.marca}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {factura.mantenimiento.vehiculo.marca}
+                              {factura.mantenimiento.vehiculo.modelo && ` ${factura.mantenimiento.vehiculo.modelo}`}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell>{factura.mantenimiento.servicio.nombre}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{factura.taller.nombre}</p>
+                            <p className="text-xs text-muted-foreground">{factura.taller.direccion}</p>
+                          </div>
+                        </TableCell>
                         <TableCell className="font-medium text-primary">{formatearMoneda(factura.total)}</TableCell>
                         <TableCell>
                           {factura.pdfUrl ? (
