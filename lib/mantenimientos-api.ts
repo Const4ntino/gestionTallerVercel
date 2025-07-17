@@ -7,6 +7,8 @@ import type {
   ServicioResponse,
   TrabajadorResponse,
   ProductoResponse,
+  MantenimientoStats,
+  MantenimientoProductoRequest,
 } from "@/types/mantenimientos"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
@@ -77,6 +79,34 @@ export const mantenimientosApi = {
       headers: getAuthHeaders(),
     })
     if (!response.ok) throw new Error("Error al filtrar mantenimientos")
+    return response.json()
+  },
+
+  updateProductos: async (mantenimientoId: number, productosUsados: MantenimientoProductoRequest[]): Promise<MantenimientoResponse> => {
+    // Obtenemos primero el mantenimiento actual
+    const mantenimiento = await mantenimientosApi.getById(mantenimientoId)
+    
+    // Creamos la solicitud de actualización manteniendo los datos originales
+    const updateRequest: MantenimientoRequest = {
+      vehiculoId: mantenimiento.vehiculo.id,
+      servicioId: mantenimiento.servicio.id,
+      trabajadorId: mantenimiento.trabajador?.id,
+      estado: mantenimiento.estado,
+      observacionesCliente: mantenimiento.observacionesCliente || "",
+      observacionesTrabajador: mantenimiento.observacionesTrabajador || "",
+      productosUsados: productosUsados
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/api/mantenimientos/${mantenimientoId}`, {
+      method: "PUT",
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updateRequest),
+    })
+    
+    if (!response.ok) throw new Error("Error al actualizar productos del mantenimiento")
     return response.json()
   },
 }
