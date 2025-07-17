@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DataTable } from "@/components/admin/data-table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -93,6 +93,54 @@ export default function MisVehiculosPage() {
     }
   }
 
+  // Definición de columnas para DataTable
+  const columns = [
+    {
+      key: "placa",
+      header: "Placa",
+      render: (vehiculo: VehiculoResponse) => vehiculo.placa,
+    },
+    {
+      key: "marca",
+      header: "Marca",
+      render: (vehiculo: VehiculoResponse) => vehiculo.marca,
+    },
+    {
+      key: "modelo",
+      header: "Modelo",
+      render: (vehiculo: VehiculoResponse) => vehiculo.modelo,
+    },
+    {
+      key: "anio",
+      header: "Año",
+      render: (vehiculo: VehiculoResponse) => vehiculo.anio,
+    },
+    {
+      key: "motor",
+      header: "Motor",
+      render: (vehiculo: VehiculoResponse) => vehiculo.motor || "-",
+    },
+    {
+      key: "tipoVehiculo",
+      header: "Tipo",
+      render: (vehiculo: VehiculoResponse) => vehiculo.tipoVehiculo || "-",
+    },
+    {
+      key: "estado",
+      header: "Estado",
+      render: (vehiculo: VehiculoResponse) => getEstadoBadge(vehiculo.estado),
+    },
+    {
+      key: "acciones",
+      header: "Acciones",
+      render: (vehiculo: VehiculoResponse) => (
+        <Button variant="ghost" size="sm" onClick={() => handleEditVehiculo(vehiculo)}>
+          <Edit className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -142,102 +190,42 @@ export default function MisVehiculosPage() {
             </Select>
           </div>
 
-          {isLoading ? (
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : vehiculos.length === 0 ? (
-            <div className="text-center py-12">
-              <Car className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No hay vehículos</h3>
-              <p className="text-muted-foreground">
-                {filters.search || filters.estado
-                  ? "No se encontraron vehículos con los filtros aplicados."
-                  : "Comienza registrando tu primer vehículo."}
-              </p>
-              {!filters.search && !filters.estado && (
-                <Button onClick={handleCreateVehiculo} className="mt-4">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Registrar Primer Vehículo
-                </Button>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Placa</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Modelo</TableHead>
-                      <TableHead>Año</TableHead>
-                      <TableHead>Motor</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="w-[70px]">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {vehiculos.map((vehiculo) => (
-                      <TableRow key={vehiculo.id}>
-                        <TableCell className="font-medium">{vehiculo.placa}</TableCell>
-                        <TableCell>{vehiculo.marca || "-"}</TableCell>
-                        <TableCell>{vehiculo.modelo || "-"}</TableCell>
-                        <TableCell>{vehiculo.anio || "-"}</TableCell>
-                        <TableCell>{vehiculo.motor || "-"}</TableCell>
-                        <TableCell>{vehiculo.tipoVehiculo || "-"}</TableCell>
-                        <TableCell>{getEstadoBadge(vehiculo.estado)}</TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Abrir menú</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditVehiculo(vehiculo)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Editar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+          <DataTable
+            data={vehiculos}
+            columns={columns}
+            totalPages={totalPages}
+            currentPage={currentPage}
+            totalElements={totalElements}
+            onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+            onPageSizeChange={(size) => setFilters((prev) => ({ ...prev, size, page: 0 }))}
+            pageSize={filters.size}
+            isLoading={isLoading}
+          />
 
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between space-x-2 py-4">
-                  <div className="text-sm text-muted-foreground">
-                    Página {currentPage + 1} de {totalPages}
-                  </div>
-                  <div className="space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 0}
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages - 1}
-                    >
-                      Siguiente
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between space-x-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                Página {currentPage + 1} de {totalPages}
+              </div>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 0}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages - 1}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

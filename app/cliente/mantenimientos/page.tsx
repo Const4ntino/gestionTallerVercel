@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { DataTable } from "@/components/admin/data-table"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Pagination,
@@ -112,6 +113,58 @@ export default function MantenimientosPage() {
       day: "numeric",
     })
   }
+
+  // Definición de columnas para DataTable
+  const columns = [
+    {
+      key: "id",
+      header: "ID",
+      render: (m: MantenimientoResponseCliente) => (
+        <span className="font-medium">#{m.id}</span>
+      ),
+    },
+    {
+      key: "vehiculo",
+      header: "Vehículo",
+      render: (m: MantenimientoResponseCliente) => (
+        <div>
+          <div className="font-medium">{m.vehiculo.placa}</div>
+          <div className="text-sm text-muted-foreground">{m.vehiculo.marca} {m.vehiculo.modelo}</div>
+        </div>
+      ),
+    },
+    {
+      key: "servicio",
+      header: "Servicio",
+      render: (m: MantenimientoResponseCliente) => m.servicio.nombre,
+    },
+    {
+      key: "taller",
+      header: "Taller",
+      render: (m: MantenimientoResponseCliente) => m.servicio.taller.nombre,
+    },
+    {
+      key: "estado",
+      header: "Estado",
+      render: (m: MantenimientoResponseCliente) => (
+        <Badge className={estadoColors[m.estado]}>{m.estado.replace("_", " ")}</Badge>
+      ),
+    },
+    {
+      key: "fechaCreacion",
+      header: "Fecha Creación",
+      render: (m: MantenimientoResponseCliente) => formatDate(m.fechaCreacion),
+    },
+    {
+      key: "acciones",
+      header: "Acciones",
+      render: (m: MantenimientoResponseCliente) => (
+        <Button variant="ghost" size="sm" onClick={() => handleVerDetalles(m)}>
+          <Eye className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -244,88 +297,17 @@ export default function MantenimientosPage() {
               </Button>
             </div>
           ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Vehículo</TableHead>
-                    <TableHead>Servicio</TableHead>
-                    <TableHead>Taller</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fecha Creación</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mantenimientos.map((mantenimiento) => (
-                    <TableRow key={mantenimiento.id}>
-                      <TableCell className="font-medium">#{mantenimiento.id}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{mantenimiento.vehiculo.placa}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {mantenimiento.vehiculo.marca} {mantenimiento.vehiculo.modelo}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{mantenimiento.servicio.nombre}</TableCell>
-                      <TableCell>{mantenimiento.servicio.taller.nombre}</TableCell>
-                      <TableCell>
-                        <Badge className={estadoColors[mantenimiento.estado]}>
-                          {mantenimiento.estado.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(mantenimiento.fechaCreacion)}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => handleVerDetalles(mantenimiento)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {/* Paginación */}
-              {totalPages > 1 && (
-                <div className="mt-4">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => handlePageChange(Math.max(0, (filters.page || 0) - 1))}
-                          className={filters.page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        const pageNum = i + Math.max(0, (filters.page || 0) - 2)
-                        if (pageNum >= totalPages) return null
-                        return (
-                          <PaginationItem key={pageNum}>
-                            <PaginationLink
-                              onClick={() => handlePageChange(pageNum)}
-                              isActive={pageNum === filters.page}
-                              className="cursor-pointer"
-                            >
-                              {pageNum + 1}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      })}
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => handlePageChange(Math.min(totalPages - 1, (filters.page || 0) + 1))}
-                          className={
-                            filters.page === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
-                          }
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
-            </>
+            <DataTable
+              data={mantenimientos}
+              columns={columns}
+              totalPages={totalPages}
+              currentPage={filters.page || 0}
+              totalElements={totalElements}
+              onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+              onPageSizeChange={(size) => setFilters((prev) => ({ ...prev, size, page: 0 }))}
+              pageSize={filters.size}
+              isLoading={loading}
+            />
           )}
         </CardContent>
       </Card>

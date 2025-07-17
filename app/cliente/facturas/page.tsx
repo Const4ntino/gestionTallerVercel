@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { DataTable } from "@/components/admin/data-table"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -88,7 +89,8 @@ export default function MisFacturasPage() {
 
   const handleDescargarPDF = (pdfUrl: string | null) => {
     if (pdfUrl) {
-      window.open(pdfUrl, "_blank")
+      const getFullPdfUrl = (url: string) => url.startsWith('http') ? url : `http://localhost:8080${url}`;
+      window.open(getFullPdfUrl(pdfUrl), "_blank");
     } else {
       toast.error("PDF no disponible")
     }
@@ -111,6 +113,87 @@ export default function MisFacturasPage() {
   }
 
   const filtrosActivos = contarFiltrosActivos()
+
+  // Definición de columnas para DataTable
+  const columns = [
+    {
+      key: "id",
+      header: "ID",
+      render: (factura: any) => <span className="font-medium">#{factura.id}</span>,
+    },
+    {
+      key: "fechaEmision",
+      header: "Fecha",
+      render: (factura: any) => formatearFecha(factura.fechaEmision),
+    },
+    {
+      key: "vehiculo",
+      header: "Vehículo",
+      render: (factura: any) => (
+        <div>
+          <p className="font-medium">{factura.mantenimiento.vehiculo.placa}</p>
+          <p className="text-sm text-muted-foreground">
+            {factura.mantenimiento.vehiculo.marca}
+            {factura.mantenimiento.vehiculo.modelo && ` ${factura.mantenimiento.vehiculo.modelo}`}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "servicio",
+      header: "Servicio",
+      render: (factura: any) => factura.mantenimiento.servicio.nombre,
+    },
+    {
+      key: "taller",
+      header: "Taller",
+      render: (factura: any) => (
+        <div>
+          <p className="font-medium">{factura.taller.nombre}</p>
+          <p className="text-xs text-muted-foreground">{factura.taller.direccion}</p>
+        </div>
+      ),
+    },
+    {
+      key: "total",
+      header: "Total",
+      render: (factura: any) => <span className="font-medium text-primary">{formatearMoneda(factura.total)}</span>,
+    },
+    {
+      key: "pdfUrl",
+      header: "PDF",
+      render: (factura: any) => factura.pdfUrl ? (
+        <Badge variant="default">Disponible</Badge>
+      ) : (
+        <Badge variant="secondary">No disponible</Badge>
+      ),
+    },
+    {
+      key: "acciones",
+      header: "Acciones",
+      render: (factura: any) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleVerDetalles(factura.id)}>
+              <Eye className="mr-2 h-4 w-4" />
+              Ver Detalles
+            </DropdownMenuItem>
+            {factura.pdfUrl && (
+              <DropdownMenuItem onClick={() => handleDescargarPDF(factura.pdfUrl)}>
+                <Download className="mr-2 h-4 w-4" />
+                Descargar PDF
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -400,104 +483,17 @@ export default function MisFacturasPage() {
             </div>
           ) : facturas && facturas.content.length > 0 ? (
             <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Vehículo</TableHead>
-                      <TableHead>Servicio</TableHead>
-                      <TableHead>Taller</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>PDF</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {facturas.content.map((factura) => (
-                      <TableRow key={factura.id}>
-                        <TableCell className="font-medium">#{factura.id}</TableCell>
-                        <TableCell>{formatearFecha(factura.fechaEmision)}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{factura.mantenimiento.vehiculo.placa}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {factura.mantenimiento.vehiculo.marca}
-                              {factura.mantenimiento.vehiculo.modelo && ` ${factura.mantenimiento.vehiculo.modelo}`}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{factura.mantenimiento.servicio.nombre}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{factura.taller.nombre}</p>
-                            <p className="text-xs text-muted-foreground">{factura.taller.direccion}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium text-primary">{formatearMoneda(factura.total)}</TableCell>
-                        <TableCell>
-                          {factura.pdfUrl ? (
-                            <Badge variant="default">Disponible</Badge>
-                          ) : (
-                            <Badge variant="secondary">No disponible</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleVerDetalles(factura.id)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Ver Detalles
-                              </DropdownMenuItem>
-                              {factura.pdfUrl && (
-                                <DropdownMenuItem onClick={() => handleDescargarPDF(factura.pdfUrl)}>
-                                  <Download className="mr-2 h-4 w-4" />
-                                  Descargar PDF
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Paginación */}
-              {facturas.totalPages > 1 && (
-                <div className="flex items-center justify-between space-x-2 py-4">
-                  <div className="text-sm text-muted-foreground">
-                    Página {facturas.pageable.pageNumber + 1} de {facturas.totalPages}
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(facturas.pageable.pageNumber - 1)}
-                      disabled={facturas.first}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(facturas.pageable.pageNumber + 1)}
-                      disabled={facturas.last}
-                    >
-                      Siguiente
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <DataTable
+                data={facturas.content}
+                columns={columns}
+                totalPages={facturas.totalPages}
+                currentPage={facturas.pageable.pageNumber}
+                totalElements={facturas.totalElements}
+                onPageChange={(page) => setFiltros((prev) => ({ ...prev, page }))}
+                onPageSizeChange={(size) => setFiltros((prev) => ({ ...prev, size, page: 0 }))}
+                pageSize={filtros.size}
+                isLoading={loading}
+              />
             </>
           ) : (
             <div className="text-center py-8">
