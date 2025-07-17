@@ -32,10 +32,7 @@ const formSchema = z.object({
     .refine((val) => !val || val.length >= 6, {
       message: "La contraseña debe tener al menos 6 caracteres",
     }),
-  telefono: z.string()
-    .min(9, "El teléfono debe tener 9 dígitos")
-    .max(9, "El teléfono debe tener 9 dígitos")
-    .regex(/^9[0-9]{8}$/, "Debe comenzar con 9 y contener solo números"),
+  telefono: z.string().min(1, "El teléfono es requerido"),
   direccion: z.string().optional(),
 })
 
@@ -284,26 +281,7 @@ export default function MisDatosPage() {
                     <FormItem>
                       <FormLabel>Teléfono</FormLabel>
                       <FormControl>
-                        <Input
-  placeholder="Ingresa tu teléfono"
-  maxLength={9}
-  inputMode="numeric"
-  pattern="9[0-9]{8}"
-  onKeyDown={e => {
-    // Permite: borrar, tab, flechas, home/end
-    if (["Backspace", "Tab", "ArrowLeft", "ArrowRight", "Delete", "Home", "End"].includes(e.key)) return;
-    // Permite solo números
-    if (!/^[0-9]$/.test(e.key)) {
-      e.preventDefault();
-    }
-  }}
-  onInput={e => {
-    // Solo números y máximo 9 caracteres
-    const value = e.currentTarget.value.replace(/[^0-9]/g, '').slice(0, 9);
-    field.onChange(value);
-  }}
-  {...field}
-/>
+                        <Input placeholder="Ingresa tu teléfono" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

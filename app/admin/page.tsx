@@ -1,111 +1,67 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { AdminLayout } from "@/components/admin/admin-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Wrench, UserCheck, Building2 } from "lucide-react"
+import { DashboardFilters } from "@/components/admin/dashboard-filters"
+import { DashboardMetrics } from "@/components/admin/dashboard-metrics"
+import { DashboardChart } from "@/components/admin/dashboard-chart"
+import { dashboardApi } from "@/lib/dashboard-api"
+import { toast } from "sonner"
+import type { DashboardSummaryResponse, DashboardFilters as DashboardFiltersType } from "@/types/dashboard"
 
 export default function AdminDashboard() {
+  const [data, setData] = useState<DashboardSummaryResponse>()
+  const [isLoading, setIsLoading] = useState(true)
+  const [filters, setFilters] = useState<DashboardFiltersType>({
+    groupBy: "MONTH",
+  })
+
+  const loadDashboardData = async (newFilters: DashboardFiltersType) => {
+    try {
+      setIsLoading(true)
+      console.log("🔄 Cargando datos del dashboard con filtros:", newFilters)
+
+      const response = await dashboardApi.getSummary(newFilters)
+      setData(response)
+      setFilters(newFilters)
+
+      console.log("✅ Datos del dashboard cargados exitosamente")
+    } catch (error) {
+      console.error("❌ Error al cargar datos del dashboard:", error)
+      toast.error("Error al cargar los datos del dashboard")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadDashboardData(filters)
+  }, [])
+
+  const handleFiltersChange = (newFilters: DashboardFiltersType) => {
+    loadDashboardData(newFilters)
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground">
-            Bienvenido al panel de administración del sistema de talleres mecánicos.
+            Panel de control con métricas y estadísticas del sistema de talleres mecánicos.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Usuarios</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">-</div>
-              <p className="text-xs text-muted-foreground">Usuarios registrados en el sistema</p>
-            </CardContent>
-          </Card>
+        {/* Filtros */}
+        <DashboardFilters onFiltersChange={handleFiltersChange} isLoading={isLoading} />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Trabajadores</CardTitle>
-              <Wrench className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">-</div>
-              <p className="text-xs text-muted-foreground">Trabajadores activos</p>
-            </CardContent>
-          </Card>
+        {/* Métricas principales */}
+        <DashboardMetrics data={data} isLoading={isLoading} />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clientes</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">-</div>
-              <p className="text-xs text-muted-foreground">Clientes registrados</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Talleres</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">-</div>
-              <p className="text-xs text-muted-foreground">Talleres activos</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <CardTitle>Resumen del Sistema</CardTitle>
-            </CardHeader>
-            <CardContent className="pl-2">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Desde este panel puedes gestionar todos los aspectos del sistema:
-                </p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>Gestionar usuarios y sus roles</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Wrench className="h-4 w-4" />
-                    <span>Administrar trabajadores y especialidades</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4" />
-                    <span>Controlar información de clientes</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    <span>Configurar talleres y ubicaciones</span>
-                  </li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="col-span-3">
-            <CardHeader>
-              <CardTitle>Acciones Rápidas</CardTitle>
-              <CardDescription>Accesos directos a las funciones más utilizadas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Utiliza la navegación lateral para acceder a cada módulo de gestión.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Gráfico de ingresos */}
+        <div className="grid gap-4 md:grid-cols-1">
+          <DashboardChart data={data} isLoading={isLoading} groupBy={filters.groupBy || "MONTH"} />
         </div>
       </div>
     </AdminLayout>
