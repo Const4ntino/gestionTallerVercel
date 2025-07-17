@@ -26,6 +26,7 @@ import { vehiculosAdminApi } from "@/lib/vehiculos-admin-api"
 import { talleresApi } from "@/lib/admin-api"
 import type { VehiculoResponse, VehiculoFilterParams } from "@/types/vehiculos-admin"
 import type { TallerResponse } from "@/types/admin"
+import { AdminLayout } from "@/components/admin/admin-layout"
 
 export default function VehiculosAdminPage() {
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
@@ -233,166 +234,168 @@ export default function VehiculosAdminPage() {
   )
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Gestión de Vehículos</h1>
-          <p className="text-muted-foreground">Administra todos los vehículos del sistema</p>
+    <AdminLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Gestión de Vehículos</h1>
+            <p className="text-muted-foreground">Administra todos los vehículos del sistema</p>
+          </div>
+          <Button onClick={() => handleCreateEdit()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Vehículo
+          </Button>
         </div>
-        <Button onClick={() => handleCreateEdit()}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Vehículo
-        </Button>
+
+        {/* Filters */}
+        <Card>
+          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50">
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filtros Avanzados
+                  </div>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Estado */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Estado</label>
+                    <Select
+                      value={filters.estado}
+                      onValueChange={(value) => setFilters((prev) => ({ ...prev, estado: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos los estados" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="ACTIVO">Activo</SelectItem>
+                        <SelectItem value="INACTIVO">Inactivo</SelectItem>
+                        <SelectItem value="EN_MANTENIMIENTO">En Mantenimiento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Taller */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Taller</label>
+                    <Select
+                      value={filters.tallerAsignadoId?.toString() || "all"}
+                      onValueChange={(value) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          tallerAsignadoId: value === "all" ? undefined : Number.parseInt(value),
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos los talleres" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {talleres.map((taller) => (
+                          <SelectItem key={taller.id} value={taller.id.toString()}>
+                            {taller.nombre}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Fecha Desde */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Fecha Desde</label>
+                    <div className="relative">
+                      <Input
+                        type="date"
+                        value={filters.fechaCreacionDesde}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, fechaCreacionDesde: e.target.value }))}
+                      />
+                      <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Fecha Hasta */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Fecha Hasta</label>
+                    <div className="relative">
+                      <Input
+                        type="date"
+                        value={filters.fechaCreacionHasta}
+                        onChange={(e) => setFilters((prev) => ({ ...prev, fechaCreacionHasta: e.target.value }))}
+                      />
+                      <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button onClick={handleApplyFilters}>Aplicar Filtros</Button>
+                  <Button variant="outline" onClick={handleClearFilters}>
+                    Limpiar
+                  </Button>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Data Table */}
+        <DataTable
+          data={vehiculos}
+          columns={columns}
+          totalPages={totalPages}
+          currentPage={currentPage}
+          totalElements={totalElements}
+          onPageChange={setCurrentPage}
+          onSearch={handleSearch}
+          onPageSizeChange={setPageSize}
+          pageSize={pageSize}
+          isLoading={isLoading}
+          actions={renderActions}
+        />
+
+        {/* Form Modal */}
+        <VehiculoFormModal
+          isOpen={isFormModalOpen}
+          onClose={() => {
+            setIsFormModalOpen(false)
+            setSelectedVehiculo(null)
+          }}
+          onSuccess={loadVehiculos}
+          vehiculo={selectedVehiculo}
+        />
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!vehiculoToDelete} onOpenChange={() => setVehiculoToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer. Se eliminará permanentemente el vehículo{" "}
+                <strong>{vehiculoToDelete?.placa}</strong> del sistema.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-
-      {/* Filters */}
-      <Card>
-        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filtros Avanzados
-                </div>
-                <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
-              </CardTitle>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Estado */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Estado</label>
-                  <Select
-                    value={filters.estado}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, estado: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos los estados" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="ACTIVO">Activo</SelectItem>
-                      <SelectItem value="INACTIVO">Inactivo</SelectItem>
-                      <SelectItem value="EN_MANTENIMIENTO">En Mantenimiento</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Taller */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Taller</label>
-                  <Select
-                    value={filters.tallerAsignadoId?.toString() || "all"}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        tallerAsignadoId: value === "all" ? undefined : Number.parseInt(value),
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos los talleres" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {talleres.map((taller) => (
-                        <SelectItem key={taller.id} value={taller.id.toString()}>
-                          {taller.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Fecha Desde */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Fecha Desde</label>
-                  <div className="relative">
-                    <Input
-                      type="date"
-                      value={filters.fechaCreacionDesde}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, fechaCreacionDesde: e.target.value }))}
-                    />
-                    <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Fecha Hasta */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Fecha Hasta</label>
-                  <div className="relative">
-                    <Input
-                      type="date"
-                      value={filters.fechaCreacionHasta}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, fechaCreacionHasta: e.target.value }))}
-                    />
-                    <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={handleApplyFilters}>Aplicar Filtros</Button>
-                <Button variant="outline" onClick={handleClearFilters}>
-                  Limpiar
-                </Button>
-              </div>
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
-
-      {/* Data Table */}
-      <DataTable
-        data={vehiculos}
-        columns={columns}
-        totalPages={totalPages}
-        currentPage={currentPage}
-        totalElements={totalElements}
-        onPageChange={setCurrentPage}
-        onSearch={handleSearch}
-        onPageSizeChange={setPageSize}
-        pageSize={pageSize}
-        isLoading={isLoading}
-        actions={renderActions}
-      />
-
-      {/* Form Modal */}
-      <VehiculoFormModal
-        isOpen={isFormModalOpen}
-        onClose={() => {
-          setIsFormModalOpen(false)
-          setSelectedVehiculo(null)
-        }}
-        onSuccess={loadVehiculos}
-        vehiculo={selectedVehiculo}
-      />
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!vehiculoToDelete} onOpenChange={() => setVehiculoToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará permanentemente el vehículo{" "}
-              <strong>{vehiculoToDelete?.placa}</strong> del sistema.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </AdminLayout>
   )
 }
