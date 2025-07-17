@@ -239,7 +239,11 @@ export default function VehiculosAdminPage() {
           <Edit className="mr-2 h-4 w-4" />
           Editar
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setVehiculoToDelete(vehiculo)} className="text-destructive">
+        <DropdownMenuItem 
+          disabled={true} 
+          className="text-destructive opacity-50 cursor-not-allowed" 
+          title="La eliminación de vehículos está deshabilitada"
+        >
           <Trash2 className="mr-2 h-4 w-4" />
           Eliminar
         </DropdownMenuItem>

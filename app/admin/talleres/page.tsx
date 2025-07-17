@@ -163,7 +163,12 @@ export default function TalleresPage() {
       >
         <Edit className="h-4 w-4" />
       </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDelete(taller.id)}>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        disabled={true} 
+        title="La eliminación de talleres está deshabilitada"
+      >
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>

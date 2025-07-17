@@ -279,7 +279,11 @@ export function GestionFacturas() {
               <Search className="h-4 w-4 mr-2" />
               Buscar
             </Button>
-            <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+            <Button 
+              variant="outline" 
+              disabled={true}
+              title="Los filtros avanzados están deshabilitados"
+            >
               Filtros Avanzados
             </Button>
             {(Object.keys(filters).length > 0 || searchTerm) && (

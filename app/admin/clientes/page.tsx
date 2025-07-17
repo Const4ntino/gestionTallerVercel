@@ -162,7 +162,12 @@ export default function ClientesPage() {
       >
         <Edit className="h-4 w-4" />
       </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDelete(cliente.id)}>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        disabled={true} 
+        title="La eliminación de clientes está deshabilitada"
+      >
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>

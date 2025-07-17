@@ -77,9 +77,9 @@ export function formatearFecha(fecha: string): string {
 
 // Función para formatear moneda
 export function formatearMoneda(monto: number): string {
-  return new Intl.NumberFormat("es-ES", {
+  return new Intl.NumberFormat("es-PE", {
     style: "currency",
-    currency: "EUR",
+    currency: "PEN",
   }).format(monto)
 }
 

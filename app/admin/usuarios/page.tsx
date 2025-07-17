@@ -153,7 +153,12 @@ export default function UsuariosPage() {
       >
         <Edit className="h-4 w-4" />
       </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDelete(usuario.id)}>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        disabled={true} 
+        title="La eliminación de usuarios está deshabilitada"
+      >
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
