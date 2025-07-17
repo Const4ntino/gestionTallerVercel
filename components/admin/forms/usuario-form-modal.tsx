@@ -138,17 +138,29 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
             tallerAsignadoId: Number.parseInt(formData.tallerAsignadoId),
           }
           await usuariosApi.createCliente(clienteData)
-        } else if (formData.rol === "TRABAJADOR") {
-          const trabajadorData: UsuarioTrabajadorRequest = {
+        } else if (formData.rol === "TRABAJADOR" || formData.rol === "ADMINISTRADOR_TALLER") {
+          // Primero creamos el usuario con el rol correcto
+          const userData: UsuarioRequest = {
             nombreCompleto: formData.nombreCompleto,
             dni: formData.dni || "",
             correo: formData.correo,
             username: formData.username,
             contrasena: formData.contrasena,
+            rol: formData.rol, // Aquí aseguramos que se envíe el rol correcto (TRABAJADOR o ADMINISTRADOR_TALLER)
+          }
+          
+          // Creamos el usuario primero
+          const nuevoUsuario = await usuariosApi.create(userData)
+          
+          // Luego lo asociamos como trabajador al taller
+          const trabajadorData: TrabajadorRequest = {
+            usuarioId: nuevoUsuario.id,
             especialidad: formData.especialidad,
             tallerId: Number.parseInt(formData.tallerId),
           }
-          await usuariosApi.createTrabajador(trabajadorData)
+          
+          // Creamos el trabajador asociado al usuario
+          await usuariosApi.asociarTrabajador(trabajadorData)
         } else {
           const userData: UsuarioRequest = {
             nombreCompleto: formData.nombreCompleto,
@@ -275,6 +287,7 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ADMINISTRADOR">Administrador</SelectItem>
+                <SelectItem value="ADMINISTRADOR_TALLER">Administrador de Taller</SelectItem>
                 <SelectItem value="TRABAJADOR">Trabajador</SelectItem>
                 <SelectItem value="CLIENTE">Cliente</SelectItem>
               </SelectContent>
@@ -324,6 +337,39 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
                   onChange={(e) => handleChange("direccion", e.target.value)}
                   required
                 />
+              </div>
+            </>
+          )}
+
+          {/* Campos adicionales para ADMINISTRADOR_TALLER */}
+          {formData.rol === "ADMINISTRADOR_TALLER" && !usuario && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="especialidad">Especialidad</Label>
+                  <Input
+                    id="especialidad"
+                    value={formData.especialidad}
+                    onChange={(e) => handleChange("especialidad", e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tallerId">Taller</Label>
+                  <Select value={formData.tallerId} onValueChange={(value) => handleChange("tallerId", value)} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un taller" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {talleres.map((taller) => (
+                        <SelectItem key={taller.id} value={taller.id.toString()}>
+                          {taller.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </>
           )}

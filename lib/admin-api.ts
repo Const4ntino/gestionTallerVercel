@@ -70,6 +70,17 @@ export const usuariosApi = {
     if (!response.ok) throw new Error("Error al crear trabajador")
     return response.json()
   },
+  
+  // Método para asociar un usuario existente como trabajador
+  asociarTrabajador: async (data: TrabajadorRequest): Promise<TrabajadorResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/trabajadores`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) throw new Error("Error al asociar usuario como trabajador")
+    return response.json()
+  },
 
   update: async (id: number, data: UsuarioRequest): Promise<UsuarioResponse> => {
     const response = await fetch(`${API_BASE_URL}/api/usuarios/${id}`, {
