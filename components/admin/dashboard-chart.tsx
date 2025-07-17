@@ -1,9 +1,8 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import type { DashboardSummaryResponse } from "@/types/dashboard"
 
 interface DashboardChartProps {
@@ -13,11 +12,13 @@ interface DashboardChartProps {
 }
 
 export function DashboardChart({ data, isLoading, groupBy }: DashboardChartProps) {
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("es-PE", {
       style: "currency",
       currency: "PEN",
-    }).format(amount)
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
   }
 
   const formatPeriod = (period: string) => {
@@ -25,21 +26,31 @@ export function DashboardChart({ data, isLoading, groupBy }: DashboardChartProps
       return period
     }
 
-    // Para formato YYYY-MM, convertir a formato más legible
+    // Para formato YYYY-MM, convertir a formato legible
     const [year, month] = period.split("-")
     const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-    return `${monthNames[Number.parseInt(month) - 1]} ${year}`
+
+    const monthIndex = Number.parseInt(month) - 1
+    return `${monthNames[monthIndex]} ${year}`
   }
 
   if (isLoading) {
     return (
-      <Card className="col-span-4">
+      <Card>
         <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-64" />
+          <CardTitle>Ingresos por Período</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[350px] w-full" />
+          <div className="h-[400px] flex items-center justify-center">
+            <div className="space-y-4 w-full">
+              <Skeleton className="h-8 w-48 mx-auto" />
+              <div className="grid grid-cols-6 gap-4">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton key={index} className="h-32 w-full" />
+                ))}
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     )
@@ -47,13 +58,12 @@ export function DashboardChart({ data, isLoading, groupBy }: DashboardChartProps
 
   if (!data || !data.ingresosPorPeriodo || Object.keys(data.ingresosPorPeriodo).length === 0) {
     return (
-      <Card className="col-span-4">
+      <Card>
         <CardHeader>
           <CardTitle>Ingresos por Período</CardTitle>
-          <CardDescription>Visualización de ingresos {groupBy === "MONTH" ? "mensuales" : "anuales"}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[350px] flex items-center justify-center">
+          <div className="h-[400px] flex items-center justify-center">
             <p className="text-muted-foreground">No hay datos de ingresos disponibles</p>
           </div>
         </CardContent>
@@ -61,7 +71,7 @@ export function DashboardChart({ data, isLoading, groupBy }: DashboardChartProps
     )
   }
 
-  // Convertir los datos para el gráfico
+  // Convertir datos para el gráfico
   const chartData = Object.entries(data.ingresosPorPeriodo)
     .map(([period, amount]) => ({
       period: formatPeriod(period),
@@ -70,34 +80,26 @@ export function DashboardChart({ data, isLoading, groupBy }: DashboardChartProps
     }))
     .sort((a, b) => a.originalPeriod.localeCompare(b.originalPeriod))
 
-  const chartConfig = {
-    ingresos: {
-      label: "Ingresos",
-      color: "hsl(var(--primary))",
-    },
-  }
-
   return (
-    <Card className="col-span-4">
+    <Card>
       <CardHeader>
         <CardTitle>Ingresos por Período</CardTitle>
-        <CardDescription>Visualización de ingresos {groupBy === "MONTH" ? "mensuales" : "anuales"}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData}>
+        <div className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="period" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={80} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => formatCurrency(value)} />
-              <ChartTooltip
-                content={<ChartTooltipContent />}
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={formatCurrency} />
+              <Tooltip
                 formatter={(value: number) => [formatCurrency(value), "Ingresos"]}
+                labelStyle={{ color: "#000" }}
               />
-              <Bar dataKey="ingresos" fill="var(--color-ingresos)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="ingresos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </ChartContainer>
+        </div>
       </CardContent>
     </Card>
   )

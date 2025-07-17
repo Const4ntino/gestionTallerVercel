@@ -60,9 +60,7 @@ export default function AdminDashboard() {
         <DashboardMetrics data={data} isLoading={isLoading} />
 
         {/* Gráfico de ingresos */}
-        <div className="grid gap-4 md:grid-cols-1">
-          <DashboardChart data={data} isLoading={isLoading} groupBy={filters.groupBy || "MONTH"} />
-        </div>
+        <DashboardChart data={data} isLoading={isLoading} groupBy={filters.groupBy || "MONTH"} />
       </div>
     </AdminLayout>
   )

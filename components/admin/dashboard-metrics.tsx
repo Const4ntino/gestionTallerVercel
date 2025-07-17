@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Wrench, UserCheck, Building2, DollarSign } from "lucide-react"
+import { Users, Wrench, Car, DollarSign } from "lucide-react"
 import type { DashboardSummaryResponse } from "@/types/dashboard"
 
 interface DashboardMetricsProps {
@@ -15,6 +15,7 @@ export function DashboardMetrics({ data, isLoading }: DashboardMetricsProps) {
     return new Intl.NumberFormat("es-PE", {
       style: "currency",
       currency: "PEN",
+      minimumFractionDigits: 2,
     }).format(amount)
   }
 
@@ -25,8 +26,8 @@ export function DashboardMetrics({ data, isLoading }: DashboardMetricsProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-4 w-4" />
@@ -46,7 +47,7 @@ export function DashboardMetrics({ data, isLoading }: DashboardMetricsProps) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="p-6">
-            <p className="text-center text-muted-foreground">No hay datos disponibles</p>
+            <p className="text-sm text-muted-foreground">No hay datos disponibles</p>
           </CardContent>
         </Card>
       </div>
@@ -62,14 +63,14 @@ export function DashboardMetrics({ data, isLoading }: DashboardMetricsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatNumber(data.totalMantenimientos)}</div>
-          <p className="text-xs text-muted-foreground">Mantenimientos realizados</p>
+          <p className="text-xs text-muted-foreground">Mantenimientos registrados</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Clientes</CardTitle>
-          <UserCheck className="h-4 w-4 text-muted-foreground" />
+          <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatNumber(data.totalClientes)}</div>
@@ -80,7 +81,7 @@ export function DashboardMetrics({ data, isLoading }: DashboardMetricsProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Vehículos</CardTitle>
-          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <Car className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatNumber(data.totalVehiculos)}</div>

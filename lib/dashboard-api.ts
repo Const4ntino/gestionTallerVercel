@@ -1,56 +1,72 @@
-import type { DashboardSummaryResponse, DashboardFilters } from "@/types/dashboard"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://4f95e785bfa1.ngrok-free.app"
-
-function getAuthHeaders() {
-  const token = localStorage.getItem("token")
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  }
+export interface DashboardSummaryResponse {
+  totalMantenimientos: number
+  totalClientes: number
+  totalVehiculos: number
+  totalIngresos: number
+  ingresosPorPeriodo: Record<string, number>
 }
 
-export const dashboardApi = {
-  getSummary: async (filters: DashboardFilters = {}): Promise<DashboardSummaryResponse> => {
-    console.log("🔄 Obteniendo resumen del dashboard con filtros:", filters)
+export interface DashboardFilters {
+  startDate?: string
+  endDate?: string
+  groupBy?: "MONTH" | "YEAR"
+}
 
-    const searchParams = new URLSearchParams()
-
-    if (filters.startDate) {
-      searchParams.append("startDate", filters.startDate)
+class DashboardApi {
+  private getAuthHeaders() {
+    const token = localStorage.getItem("token")
+    return {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
     }
-    if (filters.endDate) {
-      searchParams.append("endDate", filters.endDate)
-    }
-    if (filters.groupBy) {
-      searchParams.append("groupBy", filters.groupBy)
-    }
+  }
 
-    const url = `${API_BASE_URL}/api/dashboard/summary${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
-    console.log("🌐 URL de solicitud:", url)
-
+  async getSummary(filters: DashboardFilters = {}): Promise<DashboardSummaryResponse> {
     try {
+      console.log("🔍 Obteniendo resumen del dashboard con filtros:", filters)
+
+      // Construir parámetros de consulta
+      const params = new URLSearchParams()
+
+      if (filters.startDate) {
+        params.append("startDate", filters.startDate)
+      }
+
+      if (filters.endDate) {
+        params.append("endDate", filters.endDate)
+      }
+
+      if (filters.groupBy) {
+        params.append("groupBy", filters.groupBy)
+      }
+
+      const queryString = params.toString()
+      const url = `${API_BASE_URL}/api/dashboard/summary${queryString ? `?${queryString}` : ""}`
+
+      console.log("📡 URL de solicitud:", url)
+
       const response = await fetch(url, {
         method: "GET",
-        headers: getAuthHeaders(),
+        headers: this.getAuthHeaders(),
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("❌ Error en respuesta del dashboard:", {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText,
-        })
-        throw new Error(`Error al obtener resumen del dashboard: ${response.status}`)
+        const errorData = await response.json().catch(() => ({}))
+        console.error("❌ Error en respuesta del dashboard:", errorData)
+        throw new Error(`Error ${response.status}: ${errorData.mensaje || "Error al obtener datos del dashboard"}`)
       }
 
       const data = await response.json()
       console.log("📊 Datos del dashboard recibidos:", data)
+
       return data
     } catch (error) {
       console.error("❌ Error al obtener resumen del dashboard:", error)
       throw error
     }
-  },
+  }
 }
+
+export const dashboardApi = new DashboardApi()
