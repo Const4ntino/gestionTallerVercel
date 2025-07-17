@@ -24,17 +24,34 @@ export function DashboardFilters({ onFiltersChange, isLoading }: DashboardFilter
       groupBy,
     }
 
-    // Convertir fechas a formato ISO si están presentes
-    if (startDate) {
-      const start = new Date(startDate)
-      start.setHours(0, 0, 0, 0)
-      filters.startDate = start.toISOString()
-    }
-
-    if (endDate) {
-      const end = new Date(endDate)
-      end.setHours(23, 59, 59, 999)
-      filters.endDate = end.toISOString()
+    // Convertir fechas según el modo de agrupación
+    if (groupBy === "MONTH") {
+      if (startDate) {
+        // "2025-07" => primer día del mes
+        const [year, month] = startDate.split("-");
+        const start = new Date(Number(year), Number(month) - 1, 1, 0, 0, 0, 0);
+        filters.startDate = start.toISOString();
+      }
+      if (endDate) {
+        // "2025-08" => último día del mes
+        const [year, month] = endDate.split("-");
+        // Día 0 del mes siguiente es el último día del mes actual
+        const end = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
+        filters.endDate = end.toISOString();
+      }
+    } else if (groupBy === "YEAR") {
+      if (startDate) {
+        // Solo año: primer día del año
+        const year = Number(startDate);
+        const start = new Date(year, 0, 1, 0, 0, 0, 0);
+        filters.startDate = start.toISOString();
+      }
+      if (endDate) {
+        // Solo año: último día del año
+        const year = Number(endDate);
+        const end = new Date(year, 11, 31, 23, 59, 59, 999);
+        filters.endDate = end.toISOString();
+      }
     }
 
     console.log("🔍 Aplicando filtros del dashboard:", filters)
@@ -60,26 +77,54 @@ export function DashboardFilters({ onFiltersChange, isLoading }: DashboardFilter
         <div className="grid gap-4 md:grid-cols-4 items-end">
           {/* Fecha de Inicio */}
           <div className="space-y-2">
-            <Label htmlFor="startDate">Fecha de Inicio</Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              disabled={isLoading}
-            />
+            <Label htmlFor="startDate">{groupBy === "MONTH" ? "Mes de Inicio" : "Año de Inicio"}</Label>
+            {groupBy === "MONTH" ? (
+              <Input
+                id="startDate"
+                type="month"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                disabled={isLoading}
+              />
+            ) : (
+              <Input
+                id="startDate"
+                type="number"
+                min={2000}
+                max={2100}
+                step={1}
+                placeholder="YYYY"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                disabled={isLoading}
+              />
+            )}
           </div>
 
           {/* Fecha de Fin */}
           <div className="space-y-2">
-            <Label htmlFor="endDate">Fecha de Fin</Label>
-            <Input
-              id="endDate"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              disabled={isLoading}
-            />
+            <Label htmlFor="endDate">{groupBy === "MONTH" ? "Mes de Fin" : "Año de Fin"}</Label>
+            {groupBy === "MONTH" ? (
+              <Input
+                id="endDate"
+                type="month"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                disabled={isLoading}
+              />
+            ) : (
+              <Input
+                id="endDate"
+                type="number"
+                min={2000}
+                max={2100}
+                step={1}
+                placeholder="YYYY"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                disabled={isLoading}
+              />
+            )}
           </div>
 
           {/* Agrupación */}
