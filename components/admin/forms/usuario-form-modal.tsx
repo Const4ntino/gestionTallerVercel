@@ -38,6 +38,7 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
   const [talleres, setTalleres] = useState<TallerResponse[]>([])
   const [formData, setFormData] = useState({
     nombreCompleto: "",
+    dni: "",
     correo: "",
     username: "",
     contrasena: "",
@@ -49,25 +50,40 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
     tallerId: "",
   })
 
+  // Cargar los datos completos del usuario cuando se edita
+  const loadUsuarioCompleto = async (id: number) => {
+    try {
+      const usuarioCompleto = await usuariosApi.getById(id)
+      console.log("Usuario completo cargado:", usuarioCompleto) // Para depuración
+      setFormData({
+        nombreCompleto: usuarioCompleto.nombreCompleto,
+        dni: usuarioCompleto.dni || "",
+        correo: usuarioCompleto.correo,
+        username: usuarioCompleto.username,
+        contrasena: "",
+        rol: usuarioCompleto.rol,
+        telefono: "",
+        direccion: "",
+        tallerAsignadoId: "",
+        especialidad: "",
+        tallerId: "",
+      })
+    } catch (error) {
+      console.error("Error al cargar datos completos del usuario:", error)
+      toast.error("Error al cargar datos del usuario")
+    }
+  }
+
   useEffect(() => {
     if (open) {
       loadTalleres()
       if (usuario) {
-        setFormData({
-          nombreCompleto: usuario.nombreCompleto,
-          correo: usuario.correo,
-          username: usuario.username,
-          contrasena: "",
-          rol: usuario.rol,
-          telefono: "",
-          direccion: "",
-          tallerAsignadoId: "",
-          especialidad: "",
-          tallerId: "",
-        })
+        // Cargar datos completos del usuario para asegurar que tenemos el DNI
+        loadUsuarioCompleto(usuario.id)
       } else {
         setFormData({
           nombreCompleto: "",
+          dni: "",
           correo: "",
           username: "",
           contrasena: "",
@@ -100,9 +116,10 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
         // Actualizar usuario existente
         const updateData: UsuarioRequest = {
           nombreCompleto: formData.nombreCompleto,
+          dni: formData.dni || "",
           correo: formData.correo,
           username: formData.username,
-          contrasena: formData.contrasena || undefined,
+          contrasena: formData.contrasena || "",
           rol: formData.rol,
         }
         await usuariosApi.update(usuario.id, updateData)
@@ -112,6 +129,7 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
         if (formData.rol === "CLIENTE") {
           const clienteData: UsuarioClienteRequest = {
             nombreCompleto: formData.nombreCompleto,
+            dni: formData.dni || "",
             correo: formData.correo,
             username: formData.username,
             contrasena: formData.contrasena,
@@ -123,6 +141,7 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
         } else if (formData.rol === "TRABAJADOR") {
           const trabajadorData: UsuarioTrabajadorRequest = {
             nombreCompleto: formData.nombreCompleto,
+            dni: formData.dni || "",
             correo: formData.correo,
             username: formData.username,
             contrasena: formData.contrasena,
@@ -133,6 +152,7 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
         } else {
           const userData: UsuarioRequest = {
             nombreCompleto: formData.nombreCompleto,
+            dni: formData.dni || "",
             correo: formData.correo,
             username: formData.username,
             contrasena: formData.contrasena,
@@ -154,6 +174,26 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
   }
 
   const handleChange = (field: string, value: string) => {
+    // Validación especial para el campo DNI: solo números y máximo 8 caracteres
+    if (field === "dni" && value !== "") {
+      const onlyNumbers = value.replace(/[^0-9]/g, "")
+      if (onlyNumbers !== value) {
+        // Si se intentó ingresar algo que no son números, usar solo los números
+        setFormData((prev) => ({
+          ...prev,
+          [field]: onlyNumbers.slice(0, 8),
+        }))
+        return
+      }
+      // Limitar a 8 caracteres
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value.slice(0, 8),
+      }))
+      return
+    }
+    
+    // Para los demás campos, comportamiento normal
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -179,6 +219,19 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="dni">DNI</Label>
+              <Input
+                id="dni"
+                value={formData.dni}
+                onChange={(e) => handleChange("dni", e.target.value)}
+                maxLength={8}
+                placeholder="Ingrese DNI (8 dígitos)"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="correo">Correo Electrónico</Label>
               <Input

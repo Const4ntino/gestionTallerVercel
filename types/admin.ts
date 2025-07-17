@@ -1,6 +1,7 @@
 export interface UsuarioResponse {
   id: number
   nombreCompleto: string
+  dni?: string
   correo: string
   username: string
   rol: string
@@ -10,6 +11,7 @@ export interface UsuarioResponse {
 
 export interface UsuarioRequest {
   nombreCompleto: string
+  dni?: string
   correo: string
   username: string
   contrasena: string
@@ -18,6 +20,7 @@ export interface UsuarioRequest {
 
 export interface UsuarioClienteRequest {
   nombreCompleto: string
+  dni?: string
   correo: string
   username: string
   contrasena: string
@@ -28,6 +31,7 @@ export interface UsuarioClienteRequest {
 
 export interface UsuarioTrabajadorRequest {
   nombreCompleto: string
+  dni?: string
   correo: string
   username: string
   contrasena: string

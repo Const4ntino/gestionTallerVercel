@@ -1,6 +1,7 @@
 export interface UsuarioResponse {
   id: number
   nombreCompleto: string
+  dni?: string
   correo: string
   username: string
   rol: string
@@ -31,6 +32,7 @@ export interface ClienteResponse {
 
 export interface UsuarioClienteRequest {
   nombreCompleto: string
+  dni?: string
   correo: string
   username: string
   contrasena?: string

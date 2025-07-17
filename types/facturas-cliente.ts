@@ -50,6 +50,7 @@ export interface ClienteFacturaResponse {
 
 export interface UsuarioFacturaResponse {
   nombreCompleto: string
+  dni?: string
 }
 
 export interface TallerFacturaResponse {

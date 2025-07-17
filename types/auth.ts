@@ -5,6 +5,7 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   nombreCompleto: string
+  dni?: string
   correo: string
   username: string
   contrasena: string

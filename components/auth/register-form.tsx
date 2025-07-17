@@ -17,6 +17,7 @@ import type { RegisterRequest } from "@/types/auth"
 export function RegisterForm() {
   const [formData, setFormData] = useState<RegisterRequest>({
     nombreCompleto: "",
+    dni: "",
     correo: "",
     username: "",
     contrasena: "",
@@ -46,9 +47,31 @@ export function RegisterForm() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    
+    // Validación especial para el campo DNI: solo números y máximo 8 caracteres
+    if (name === "dni" && value !== "") {
+      const onlyNumbers = value.replace(/[^0-9]/g, "")
+      if (onlyNumbers !== value) {
+        // Si se intentó ingresar algo que no son números, usar solo los números
+        setFormData((prev) => ({
+          ...prev,
+          [name]: onlyNumbers.slice(0, 8),
+        }))
+        return
+      }
+      // Limitar a 8 caracteres
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value.slice(0, 8),
+      }))
+      return
+    }
+    
+    // Para los demás campos, comportamiento normal
     setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [name]: value,
     }))
   }
 
@@ -79,6 +102,24 @@ export function RegisterForm() {
                 onChange={handleChange}
                 className="pl-10"
                 required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="dni">DNI</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="dni"
+                name="dni"
+                type="text"
+                placeholder="Ingresa tu DNI (8 dígitos)"
+                value={formData.dni}
+                onChange={handleChange}
+                className="pl-10"
+                maxLength={8}
+                inputMode="numeric"
               />
             </div>
           </div>
