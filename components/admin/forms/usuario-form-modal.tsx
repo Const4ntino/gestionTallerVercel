@@ -275,7 +275,6 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ADMINISTRADOR">Administrador</SelectItem>
-                <SelectItem value="ADMINISTRADOR_TALLER">Administrador de Taller</SelectItem>
                 <SelectItem value="TRABAJADOR">Trabajador</SelectItem>
                 <SelectItem value="CLIENTE">Cliente</SelectItem>
               </SelectContent>

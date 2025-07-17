@@ -24,6 +24,13 @@ const formSchema = z.object({
     .string()
     .min(1, "El nombre completo es requerido")
     .max(150, "El nombre no puede exceder 150 caracteres"),
+  dni: z
+    .string()
+    .max(8, "El DNI no puede exceder 8 caracteres")
+    .optional()
+    .refine((val) => !val || /^\d{1,8}$/.test(val), {
+      message: "El DNI debe contener solo números y máximo 8 dígitos",
+    }),
   correo: z.string().email("Debe ser un correo válido").max(100, "El correo no puede exceder 100 caracteres"),
   username: z.string().min(1, "El username es requerido").max(50, "El username no puede exceder 50 caracteres"),
   contrasena: z
@@ -48,6 +55,7 @@ export default function MisDatosPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       nombreCompleto: "",
+      dni: "",
       correo: "",
       username: "",
       contrasena: "",
@@ -65,6 +73,7 @@ export default function MisDatosPage() {
       // Llenar el formulario con los datos obtenidos
       form.reset({
         nombreCompleto: data.usuario.nombreCompleto,
+        dni: data.usuario.dni || "",
         correo: data.usuario.correo,
         username: data.usuario.username,
         contrasena: "",
@@ -85,6 +94,7 @@ export default function MisDatosPage() {
 
       const requestData: UsuarioClienteRequest = {
         nombreCompleto: data.nombreCompleto,
+        dni: data.dni,
         correo: data.correo,
         username: data.username,
         telefono: data.telefono,
@@ -211,6 +221,34 @@ export default function MisDatosPage() {
                       <FormControl>
                         <Input placeholder="Ingresa tu nombre completo" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dni"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>DNI</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ingresa tu DNI (8 dígitos)" 
+                          maxLength={8}
+                          inputMode="numeric"
+                          onChange={(e) => {
+                            // Solo permitir números
+                            const value = e.target.value.replace(/[^0-9]/g, "");
+                            field.onChange(value);
+                          }}
+                          value={field.value}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormDescription>Opcional, solo números (máximo 8 dígitos)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
