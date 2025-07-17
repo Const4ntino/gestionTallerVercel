@@ -27,7 +27,7 @@ const vehiculoSchema = z.object({
   anio: z.number().optional(),
   motor: z.string().optional(),
   tipoVehiculo: z.string().optional(),
-  estado: z.enum(["ACTIVO", "INACTIVO", "EN_MANTENIMIENTO"]),
+  estado: z.enum(["ACTIVO", "INACTIVO"]),
 })
 
 interface VehiculoFormModalProps {
@@ -218,7 +218,6 @@ export function VehiculoFormModal({ open, onOpenChange, vehiculo, onSuccess }: V
                     <SelectContent>
                       <SelectItem value="ACTIVO">Activo</SelectItem>
                       <SelectItem value="INACTIVO">Inactivo</SelectItem>
-                      <SelectItem value="EN_MANTENIMIENTO">En Mantenimiento</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
