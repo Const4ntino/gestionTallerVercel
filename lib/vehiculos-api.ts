@@ -57,3 +57,9 @@ export const actualizarVehiculo = async (id: number, data: VehiculoClientRequest
 
   return response.json()
 }
+
+export const vehiculosApi = {
+  obtenerMisVehiculos,
+  crearVehiculo,
+  actualizarVehiculo,
+}
