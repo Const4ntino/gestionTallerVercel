@@ -190,6 +190,20 @@ export default function VehiculosAdminPage() {
       ),
     },
     {
+      key: "fechaCreacion",
+      header: "Fecha de creación",
+      render: (vehiculo: VehiculoResponse) => (
+        <div className="text-sm flex items-center gap-1">
+          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+          {new Date(vehiculo.fechaCreacion).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })}
+        </div>
+      ),
+    },
+    {
       key: "estado",
       header: "Estado",
       render: (vehiculo: VehiculoResponse) => (

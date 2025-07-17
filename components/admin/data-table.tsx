@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight, Search, Eye } from "lucide-react"
+import { ChevronLeft, ChevronRight, Search, Eye, X } from "lucide-react"
 
 interface Column<T> {
   key: keyof T | string
@@ -55,6 +55,19 @@ export function DataTable<T extends Record<string, any>>({
     }
   }
 
+  const handleClearSearch = () => {
+    setSearchTerm("")
+    if (onSearch) {
+      onSearch("")
+      // Dar tiempo para que se actualice el estado antes de recargar
+      setTimeout(() => {
+        if (onPageChange) {
+          onPageChange(0) // Volver a la primera página
+        }
+      }, 100)
+    }
+  }
+
   const getValue = (item: T, key: string): any => {
     return key.split(".").reduce((obj, k) => obj?.[k], item)
   }
@@ -74,6 +87,15 @@ export function DataTable<T extends Record<string, any>>({
             />
           </div>
           <Button type="submit">Buscar</Button>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handleClearSearch}
+            disabled={!searchTerm}
+          >
+            <X className="h-4 w-4 mr-1" />
+            Limpiar
+          </Button>
         </form>
       )}
 

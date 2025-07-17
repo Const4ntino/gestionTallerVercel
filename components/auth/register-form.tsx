@@ -68,6 +68,25 @@ export function RegisterForm() {
       return
     }
     
+    // Validación especial para el campo teléfono: solo números y exactamente 9 caracteres
+    if (name === "telefono") {
+      const onlyNumbers = value.replace(/[^0-9]/g, "")
+      if (onlyNumbers !== value) {
+        // Si se intentó ingresar algo que no son números, usar solo los números
+        setFormData((prev) => ({
+          ...prev,
+          [name]: onlyNumbers.slice(0, 9),
+        }))
+        return
+      }
+      // Limitar a 9 caracteres
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value.slice(0, 9),
+      }))
+      return
+    }
+    
     // Para los demás campos, comportamiento normal
     setFormData((prev) => ({
       ...prev,
@@ -183,11 +202,15 @@ export function RegisterForm() {
                 id="telefono"
                 name="telefono"
                 type="tel"
-                placeholder="Número de teléfono"
+                placeholder="Número de teléfono (9 dígitos)"
                 value={formData.telefono}
                 onChange={handleChange}
                 className="pl-10"
                 required
+                maxLength={9}
+                minLength={9}
+                inputMode="numeric"
+                pattern="[0-9]{9}"
               />
             </div>
           </div>
