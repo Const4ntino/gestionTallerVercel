@@ -1,107 +1,81 @@
-import type { AlertaResponse, AlertaEstadoRequest, AlertaFilters, AlertasPageResponse } from "@/types/alertas-cliente"
+import type { AlertaResponse, AlertaEstadoRequest, AlertasFiltros, AlertasResponse } from "@/types/alertas-cliente"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
-export const alertasClienteApi = {
-  // Listar y filtrar alertas del cliente
-  async obtenerMisAlertas(filters: AlertaFilters = {}): Promise<AlertasPageResponse> {
-    console.log("🔍 Obteniendo alertas del cliente con filtros:", filters)
+export async function obtenerMisAlertas(filtros: AlertasFiltros = {}): Promise<AlertasResponse> {
+  const token = localStorage.getItem("token")
+  if (!token) {
+    throw new Error("No hay token de autenticación")
+  }
 
-    const params = new URLSearchParams()
+  const params = new URLSearchParams()
 
-    if (filters.search) params.append("search", filters.search)
-    if (filters.vehiculoId) params.append("vehiculoId", filters.vehiculoId.toString())
-    if (filters.tipo) params.append("tipo", filters.tipo)
-    if (filters.estado) params.append("estado", filters.estado)
-    if (filters.page !== undefined) params.append("page", filters.page.toString())
-    if (filters.size !== undefined) params.append("size", filters.size.toString())
-    if (filters.sort) params.append("sort", filters.sort)
+  if (filtros.search) params.append("search", filtros.search)
+  if (filtros.vehiculoId) params.append("vehiculoId", filtros.vehiculoId.toString())
+  if (filtros.tipo) params.append("tipo", filtros.tipo)
+  if (filtros.estado) params.append("estado", filtros.estado)
+  if (filtros.page !== undefined) params.append("page", filtros.page.toString())
+  if (filtros.size !== undefined) params.append("size", filtros.size.toString())
+  if (filtros.sort) params.append("sort", filtros.sort)
 
-    const queryString = params.toString()
-    const url = `${API_BASE_URL}/api/alertas/mis-alertas/filtrar${queryString ? `?${queryString}` : ""}`
+  const url = `${API_BASE_URL}/api/alertas/mis-alertas/filtrar${params.toString() ? `?${params.toString()}` : ""}`
 
-    console.log("📡 URL de request:", url)
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  })
 
-    const token = localStorage.getItem("token")
-    if (!token) {
-      throw new Error("No hay token de autenticación")
-    }
+  if (!response.ok) {
+    throw new Error(`Error al obtener alertas: ${response.status}`)
+  }
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
+  return response.json()
+}
 
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error("❌ Error al obtener alertas:", errorData)
-      throw new Error(`Error al obtener alertas: ${response.status}`)
-    }
+export async function marcarAlertaComoVista(alertaId: number): Promise<AlertaResponse> {
+  const token = localStorage.getItem("token")
+  if (!token) {
+    throw new Error("No hay token de autenticación")
+  }
 
-    const data = await response.json()
-    console.log("✅ Alertas obtenidas:", data)
-    return data
-  },
+  const response = await fetch(`${API_BASE_URL}/api/alertas/${alertaId}/marcar-vista`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  })
 
-  // Marcar alerta como vista
-  async marcarComoVista(alertaId: number): Promise<AlertaResponse> {
-    console.log("👁️ Marcando alerta como vista:", alertaId)
+  if (!response.ok) {
+    throw new Error(`Error al marcar alerta como vista: ${response.status}`)
+  }
 
-    const token = localStorage.getItem("token")
-    if (!token) {
-      throw new Error("No hay token de autenticación")
-    }
+  return response.json()
+}
 
-    const response = await fetch(`${API_BASE_URL}/api/alertas/${alertaId}/marcar-vista`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
+export async function marcarAlertaComoResuelta(alertaId: number): Promise<void> {
+  const token = localStorage.getItem("token")
+  if (!token) {
+    throw new Error("No hay token de autenticación")
+  }
 
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error("❌ Error al marcar como vista:", errorData)
-      throw new Error(`Error al marcar como vista: ${response.status}`)
-    }
+  const requestBody: AlertaEstadoRequest = {
+    estado: "RESUELTA",
+  }
 
-    const data = await response.json()
-    console.log("✅ Alerta marcada como vista:", data)
-    return data
-  },
+  const response = await fetch(`${API_BASE_URL}/api/alertas/${alertaId}/estado`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  })
 
-  // Marcar alerta como resuelta
-  async marcarComoResuelta(alertaId: number): Promise<void> {
-    console.log("✅ Marcando alerta como resuelta:", alertaId)
-
-    const token = localStorage.getItem("token")
-    if (!token) {
-      throw new Error("No hay token de autenticación")
-    }
-
-    const requestBody: AlertaEstadoRequest = {
-      estado: "RESUELTA",
-    }
-
-    const response = await fetch(`${API_BASE_URL}/api/alertas/${alertaId}/estado`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error("❌ Error al marcar como resuelta:", errorData)
-      throw new Error(`Error al marcar como resuelta: ${response.status}`)
-    }
-
-    console.log("✅ Alerta marcada como resuelta exitosamente")
-  },
+  if (!response.ok) {
+    throw new Error(`Error al marcar alerta como resuelta: ${response.status}`)
+  }
 }

@@ -1,19 +1,8 @@
 export interface AlertaResponse {
   id: number
-  vehiculo: {
-    id: number
-    placa: string
-  } | null
-  cliente: {
-    id: number
-    usuario: {
-      nombreCompleto: string
-    }
-  }
-  taller: {
-    id: number
-    nombre: string
-  } | null
+  vehiculo: { id: number; placa: string } | null
+  cliente: { id: number; usuario: { nombreCompleto: string } }
+  taller: { id: number; nombre: string } | null
   tipo: "MANTENIMIENTO_PREVENTIVO" | "FALLA_MECANICA" | "STOCK_BAJO" | "VEHICULO_LISTO" | "NUEVA_SOLICITUD"
   mensaje: string
   estado: "NUEVA" | "VISTA" | "RESUELTA"
@@ -24,7 +13,7 @@ export interface AlertaEstadoRequest {
   estado: "RESUELTA"
 }
 
-export interface AlertaFilters {
+export interface AlertasFiltros {
   search?: string
   vehiculoId?: number
   tipo?: string
@@ -34,7 +23,7 @@ export interface AlertaFilters {
   sort?: string
 }
 
-export interface AlertasPageResponse {
+export interface AlertasResponse {
   content: AlertaResponse[]
   pageable: {
     pageNumber: number
@@ -48,5 +37,4 @@ export interface AlertasPageResponse {
   totalElements: number
   first: boolean
   last: boolean
-  numberOfElements: number
 }

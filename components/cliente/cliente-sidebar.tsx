@@ -21,14 +21,14 @@ const navigation = [
     icon: FileText,
   },
   {
-    name: "Mis Facturas",
-    href: "/cliente/facturas",
-    icon: Receipt,
-  },
-  {
     name: "Mis Alertas",
     href: "/cliente/alertas",
     icon: Bell,
+  },
+  {
+    name: "Mis Facturas",
+    href: "/cliente/facturas",
+    icon: Receipt,
   },
   {
     name: "Mi Perfil",
