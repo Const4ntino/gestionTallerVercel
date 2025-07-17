@@ -1,3 +1,5 @@
+// Tipos para el módulo de facturas del cliente
+
 export interface FacturaClienteResponse {
   id: number
   mantenimiento: MantenimientoFacturaResponse
@@ -11,45 +13,51 @@ export interface FacturaClienteResponse {
 
 export interface MantenimientoFacturaResponse {
   id: number
-  vehiculo: {
-    id: number
-    placa: string
-    marca: string
-    modelo?: string
-  }
-  servicio: {
-    id: number
-    nombre: string
-    precioBase: number
-  }
+  vehiculo: VehiculoFacturaResponse
+  servicio: ServicioFacturaResponse
   estado: string
   observacionesTrabajador: string | null
   productosUsados: ProductoUsadoResponse[]
 }
 
+export interface VehiculoFacturaResponse {
+  id: number
+  placa: string
+  marca: string
+}
+
+export interface ServicioFacturaResponse {
+  id: number
+  nombre: string
+  precioBase: number
+}
+
 export interface ProductoUsadoResponse {
-  producto: {
-    id: number
-    nombre: string
-  }
+  producto: ProductoFacturaResponse
   cantidadUsada: number
   precioEnUso: number
 }
 
+export interface ProductoFacturaResponse {
+  id: number
+  nombre: string
+}
+
 export interface ClienteFacturaResponse {
   id: number
-  usuario: {
-    nombreCompleto: string
-    email: string
-  }
+  usuario: UsuarioFacturaResponse
+}
+
+export interface UsuarioFacturaResponse {
+  nombreCompleto: string
 }
 
 export interface TallerFacturaResponse {
   id: number
   nombre: string
-  direccion: string
 }
 
+// Tipos para filtros y paginación
 export interface FacturaClienteFilters {
   search?: string
   mantenimientoId?: number
@@ -76,4 +84,16 @@ export interface FacturaClientePage {
   totalElements: number
   first: boolean
   last: boolean
+  numberOfElements: number
+}
+
+// Tipos para la tabla
+export interface FacturaClienteTableRow {
+  id: number
+  fecha: string
+  vehiculo: string
+  servicio: string
+  taller: string
+  total: number
+  pdfDisponible: boolean
 }

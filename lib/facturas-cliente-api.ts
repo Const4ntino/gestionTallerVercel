@@ -47,16 +47,21 @@ export async function obtenerMisFacturas(filters: FacturaClienteFilters = {}): P
 
 // Obtener detalles completos de una factura
 export async function obtenerDetallesFactura(id: number): Promise<FacturaClienteResponse> {
+  console.log(`Obteniendo detalles de factura ID: ${id}`)
+
   const response = await fetch(`${API_BASE_URL}/api/facturas/${id}/details`, {
     method: "GET",
     headers: createAuthHeaders(),
   })
 
   if (!response.ok) {
+    console.error(`Error al obtener detalles de factura: ${response.status}`)
     throw new Error(`Error al obtener detalles de factura: ${response.status}`)
   }
 
-  return response.json()
+  const data = await response.json()
+  console.log("Detalles de factura obtenidos:", data)
+  return data
 }
 
 // Función para formatear fecha
@@ -76,4 +81,12 @@ export function formatearMoneda(monto: number): string {
     style: "currency",
     currency: "EUR",
   }).format(monto)
+}
+
+// Exportar una instancia de la API para compatibilidad
+export const facturasClienteApi = {
+  obtenerMisFacturas,
+  obtenerDetallesFactura,
+  formatearFecha,
+  formatearMoneda,
 }
