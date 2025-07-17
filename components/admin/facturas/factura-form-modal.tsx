@@ -30,7 +30,7 @@ import { mantenimientosApi } from "@/lib/mantenimientos-api"
 import { productosMantenimientoApi } from "@/lib/mantenimientos-api"
 import type { MantenimientoPendienteFacturar, CalculatedTotalResponse, FacturaRequest } from "@/types/facturas"
 import type { ProductoResponse, MantenimientoProductoRequest } from "@/types/mantenimientos"
-import { Car, User, Wrench, Package, Receipt, PlusCircle, Trash2 } from "lucide-react"
+import { Car, User, Wrench, Package, Receipt, PlusCircle, Trash2, Loader2 } from "lucide-react"
 
 interface FacturaFormModalProps {
   open: boolean
@@ -60,15 +60,19 @@ export function FacturaFormModal({
   const [productosUsados, setProductosUsados] = useState<ProductoUsado[]>([])
   const [loadingProductos, setLoadingProductos] = useState(false)
   const [actualizandoProductos, setActualizandoProductos] = useState(false)
+  // Inicializar con el valor correcto del total calculado
+  const [totalCalculado, setTotalCalculado] = useState(calculatedTotal?.totalCalculado || 0)
 
   // Cargar datos completos del mantenimiento cuando se abre el modal
   useEffect(() => {
     if (open && mantenimiento) {
-      // Cargar productos del taller
-      loadProductosByTaller()
-      
       // Cargar datos completos del mantenimiento para asegurar que tenemos todos los productos
       loadMantenimientoCompleto(mantenimiento.id)
+      
+      // Cargar productos del taller para tener referencia de nombres
+      if (mantenimiento.servicio?.taller?.id) {
+        loadProductosByTaller(mantenimiento.servicio.taller.id)
+      }
     }
   }, [open, mantenimiento])
   
@@ -91,6 +95,10 @@ export function FacturaFormModal({
       } else {
         setProductosUsados([])
       }
+      
+      // Actualizar el total calculado desde el backend
+      const totalResponse = await facturasApi.calcularTotal(mantenimientoId)
+      setTotalCalculado(totalResponse.totalCalculado)
     } catch (error) {
       console.error("Error al cargar el mantenimiento completo:", error)
       toast.error("Error al cargar los detalles del mantenimiento")
@@ -100,14 +108,12 @@ export function FacturaFormModal({
     }
   }
   
-  const loadProductosByTaller = async () => {
-    if (!mantenimiento?.servicio?.taller?.id) return
-    
+    // Función para cargar productos si es necesario en el futuro
+  const loadProductosByTaller = async (tallerId: number) => {
     try {
       setLoadingProductos(true)
-      const tallerId = mantenimiento.servicio.taller.id
-      const productosData = await productosMantenimientoApi.filterByTaller(tallerId)
-      setProductos(productosData)
+      const productosResponse = await productosMantenimientoApi.filterByTaller(tallerId)
+      setProductos(productosResponse)
     } catch (error) {
       console.error("Error al cargar productos:", error)
       toast.error("Error al cargar los productos disponibles")
@@ -116,75 +122,17 @@ export function FacturaFormModal({
     }
   }
   
-  const agregarProducto = () => {
-    const nuevoProducto: ProductoUsado = {
-      productoId: 0,
-      cantidadUsada: 1,
-      precioEnUso: 0,
-      subtotal: 0
-    }
-    setProductosUsados([...productosUsados, nuevoProducto])
+  // Función para formatear el precio
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount).replace(/COP/g, "$")
   }
   
-  const eliminarProducto = (index: number) => {
-    const nuevosProductos = [...productosUsados]
-    nuevosProductos.splice(index, 1)
-    setProductosUsados(nuevosProductos)
-  }
-  
-  const actualizarProducto = (index: number, campo: string, valor: any) => {
-    const nuevosProductos = [...productosUsados]
-    nuevosProductos[index] = { ...nuevosProductos[index], [campo]: valor }
-    
-    if (campo === "productoId") {
-      const productoSeleccionado = productos.find(p => p.id === valor)
-      if (productoSeleccionado?.precio) {
-        nuevosProductos[index].precioEnUso = productoSeleccionado.precio
-        nuevosProductos[index].subtotal = productoSeleccionado.precio * nuevosProductos[index].cantidadUsada
-      } else {
-        nuevosProductos[index].precioEnUso = 0
-        nuevosProductos[index].subtotal = 0
-      }
-    } else if (campo === "cantidadUsada") {
-      nuevosProductos[index].subtotal = nuevosProductos[index].precioEnUso * valor
-    }
-    
-    setProductosUsados(nuevosProductos)
-  }
-  
-  const guardarProductos = async () => {
-    if (!mantenimiento?.id) return
-    
-    try {
-      setActualizandoProductos(true)
-      
-      // Convertir a formato requerido por la API
-      const productosRequest: MantenimientoProductoRequest[] = productosUsados
-        .filter(p => p.productoId > 0) // Filtrar productos no seleccionados
-        .map(p => ({
-          productoId: p.productoId,
-          cantidadUsada: p.cantidadUsada,
-          precioEnUso: p.precioEnUso
-        }))
-      
-      // Actualizar productos del mantenimiento
-      await mantenimientosApi.updateProductos(mantenimiento.id, productosRequest)
-      
-      // Recalcular el total
-      const nuevoTotal = await facturasApi.calcularTotal(mantenimiento.id)
-      
-      // Actualizar el estado local
-      toast.success("Productos actualizados correctamente")
-      
-      // Recargar la página para reflejar los cambios
-      window.location.reload()
-    } catch (error) {
-      console.error("Error al actualizar productos:", error)
-      toast.error("Error al actualizar los productos")
-    } finally {
-      setActualizandoProductos(false)
-    }
-  }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -209,12 +157,7 @@ export function FacturaFormModal({
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: "COP",
-    }).format(amount)
-  }
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-CO", {
@@ -299,135 +242,56 @@ export function FacturaFormModal({
                 <Package className="h-5 w-5" />
                 Productos Utilizados
               </h3>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={agregarProducto}
-                className="flex items-center gap-1"
-              >
-                <PlusCircle className="h-4 w-4" />
-                Agregar Producto
-              </Button>
             </div>
 
             {productosUsados.length === 0 ? (
               <div className="text-center p-4 border border-dashed rounded-lg">
                 <p className="text-muted-foreground">No hay productos agregados</p>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={agregarProducto}
-                  className="mt-2"
-                >
-                  <PlusCircle className="h-4 w-4 mr-1" />
-                  Agregar Producto
-                </Button>
               </div>
             ) : (
               <div className="space-y-3">
-                {productosUsados.map((producto, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 border rounded-lg">
-                    <div className="space-y-1">
-                      <Label>Producto</Label>
-                      <Select
-                        value={producto.productoId.toString()}
-                        onValueChange={(value) => actualizarProducto(index, "productoId", Number.parseInt(value))}
-                        disabled={loadingProductos}
-                      >
-                        <SelectTrigger className="h-9">
-                          {loadingProductos ? (
-                            <span className="text-muted-foreground">Cargando productos...</span>
-                          ) : (
-                            <SelectValue placeholder="Selecciona un producto" />
-                          )}
-                        </SelectTrigger>
-                        <SelectContent>
-                          {productos.length === 0 ? (
-                            <SelectItem value="0" disabled>
-                              {loadingProductos 
-                                ? "Cargando productos..." 
-                                : "No hay productos disponibles"}
-                            </SelectItem>
-                          ) : (
-                            <>
-                              <SelectItem value="0">Selecciona un producto</SelectItem>
-                              {productos.map((prod) => (
-                                <SelectItem key={prod.id} value={prod.id.toString()}>
-                                  {prod.nombre} {prod.precio && `- $${prod.precio}`}
-                                </SelectItem>
-                              ))}
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      {producto.productoId > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          Precio: ${producto.precioEnUso.toFixed(2)}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label>Cantidad</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={producto.cantidadUsada}
-                        onChange={(e) => actualizarProducto(index, "cantidadUsada", Number.parseInt(e.target.value))}
-                        className="h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label>Subtotal</Label>
-                      <Input
-                        type="text"
-                        value={`$${producto.subtotal.toFixed(2)}`}
-                        readOnly
-                        className="bg-muted cursor-not-allowed h-9"
-                      />
-                    </div>
-
-                    <div className="flex items-end justify-center">
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => eliminarProducto(index)}
-                        className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                
-                <div className="flex justify-end">
-                  <Button 
-                    type="button" 
-                    variant="secondary" 
-                    onClick={guardarProductos} 
-                    disabled={actualizandoProductos}
-                  >
-                    {actualizandoProductos ? "Guardando..." : "Guardar Productos"}
-                  </Button>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-2 bg-muted/30 rounded-lg text-sm font-medium">
+                  <div>Producto</div>
+                  <div>Cantidad</div>
+                  <div>Subtotal</div>
                 </div>
+                
+                {productosUsados.map((producto, index) => {
+                  // Buscar el nombre del producto
+                  const productoInfo = productos.find(p => p.id === producto.productoId);
+                  return (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{productoInfo?.nombre || "Producto no disponible"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Precio unitario: {formatCurrency(producto.precioEnUso)}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        {producto.cantidadUsada}
+                      </div>
+                      
+                      <div className="flex items-center font-medium">
+                        {formatCurrency(producto.subtotal)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
           <Separator />
 
-          {/* Total Calculado */}
+          {/* Resumen de Facturación */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Resumen de Facturación</h3>
 
             <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
-              <div className="flex items-center justify-between text-lg">
-                <span className="font-semibold">Total a Facturar:</span>
-                <span className="font-bold text-primary">{formatCurrency(calculatedTotal.totalCalculado || 0)}</span>
+              <div className="flex justify-between items-center py-4">
+                <div className="text-lg font-semibold">Total a Facturar:</div>
+                <div className="text-xl font-bold">{formatCurrency(totalCalculado)}</div>
               </div>
             </div>
           </div>
