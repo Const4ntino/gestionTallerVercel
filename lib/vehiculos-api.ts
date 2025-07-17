@@ -30,6 +30,9 @@ export const obtenerMisVehiculos = async (filters: VehiculoFilters): Promise<Pag
   return response.json()
 }
 
+// Alias – some parts of the codebase expect this name
+export const obtenerVehiculosCliente = obtenerMisVehiculos
+
 export const crearVehiculo = async (data: VehiculoClientRequest): Promise<VehiculoResponse> => {
   const response = await fetch(`${API_BASE_URL}/api/vehiculos/cliente`, {
     method: "POST",
@@ -60,6 +63,7 @@ export const actualizarVehiculo = async (id: number, data: VehiculoClientRequest
 
 export const vehiculosApi = {
   obtenerMisVehiculos,
+  obtenerVehiculosCliente, // 👈 new
   crearVehiculo,
   actualizarVehiculo,
 }
