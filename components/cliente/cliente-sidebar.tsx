@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/contexts/auth-context"
-import { Car, FileText, Receipt, User, LogOut, Menu } from "lucide-react"
+import { Car, FileText, Receipt, User, LogOut, Menu, Bell } from "lucide-react"
 
 const navigation = [
   {
@@ -24,6 +24,11 @@ const navigation = [
     name: "Mis Facturas",
     href: "/cliente/facturas",
     icon: Receipt,
+  },
+  {
+    name: "Mis Alertas",
+    href: "/cliente/alertas",
+    icon: Bell,
   },
   {
     name: "Mi Perfil",
