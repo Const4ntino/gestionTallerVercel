@@ -116,7 +116,14 @@ export function FacturaDetailsModal({ facturaId, isOpen, onClose }: FacturaDetai
                   </div>
                   {factura.pdfUrl && (
                     <Button
-                      onClick={handleDownloadPDF}
+                      onClick={() => {
+                        if (factura?.pdfUrl) {
+                          const getFullPdfUrl = (url: string) => url.startsWith('http') ? url : `http://localhost:8080${url}`;
+                          window.open(getFullPdfUrl(factura.pdfUrl), "_blank");
+                        } else {
+                          toast.error("PDF no disponible");
+                        }
+                      }}
                       variant="outline"
                       size="sm"
                       className="w-full md:w-auto bg-transparent"
