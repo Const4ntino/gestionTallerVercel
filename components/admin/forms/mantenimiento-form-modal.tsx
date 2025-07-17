@@ -62,6 +62,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   >([])
   const [vehiculoSearch, setVehiculoSearch] = useState("")
   const [openVehiculoCombobox, setOpenVehiculoCombobox] = useState(false)
+  const [loadingProductos, setLoadingProductos] = useState(false)
 
   const {
     register,
@@ -79,12 +80,32 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   })
 
   const selectedVehiculoId = watch("vehiculoId")
+  const selectedServicioId = watch("servicioId")
 
   useEffect(() => {
     if (open) {
       loadData()
     }
   }, [open])
+
+  // Cargar productos cuando cambia el servicio seleccionado
+  useEffect(() => {
+    if (selectedServicioId) {
+      const servicio = servicios.find(s => s.id === selectedServicioId)
+      if (servicio?.taller?.id) {
+        loadProductosByTaller(servicio.taller.id)
+      }
+    } else {
+      // Limpiar productos si no hay servicio seleccionado
+      setProductos([])
+      
+      // Si hay productos usados, los limpiamos
+      if (productosUsados.length > 0) {
+        setProductosUsados([])
+        setValue("productosUsados", [])
+      }
+    }
+  }, [selectedServicioId, servicios])
 
   useEffect(() => {
     if (mantenimiento) {
@@ -114,22 +135,36 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const loadData = async () => {
     try {
       setIsLoading(true)
-      const [vehiculosData, serviciosData, trabajadoresData, productosData] = await Promise.all([
+      const [vehiculosData, serviciosData, trabajadoresData] = await Promise.all([
         vehiculosApi.filter("", "ACTIVO"),
         serviciosMantenimientoApi.getAll(),
         trabajadoresMantenimientoApi.getAll(),
-        productosMantenimientoApi.getAll(),
       ])
 
       setVehiculos(vehiculosData.content || [])
       setServicios(serviciosData)
       setTrabajadores(trabajadoresData)
-      setProductos(productosData)
+      
+      // No cargamos productos aquí, esperamos a que se seleccione un servicio
+      setProductos([])
     } catch (error) {
       toast.error("Error al cargar datos")
       console.error(error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadProductosByTaller = async (tallerId: number) => {
+    try {
+      setLoadingProductos(true)
+      const productosData = await productosMantenimientoApi.filterByTaller(tallerId)
+      setProductos(productosData)
+    } catch (error) {
+      toast.error("Error al cargar productos del taller")
+      console.error(error)
+    } finally {
+      setLoadingProductos(false)
     }
   }
 
@@ -143,6 +178,12 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   }
 
   const agregarProducto = () => {
+    // Solo permitir agregar productos si hay un servicio seleccionado
+    if (!selectedServicioId) {
+      toast.error("Debes seleccionar un servicio antes de agregar productos")
+      return
+    }
+    
     const nuevosProductos = [...productosUsados, { productoId: 0, cantidadUsada: 1, precioEnUso: 0 }]
     setProductosUsados(nuevosProductos)
     setValue("productosUsados", nuevosProductos)
@@ -277,7 +318,16 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
               <Label htmlFor="servicioId">Servicio</Label>
               <Select
                 value={watch("servicioId")?.toString() || "0"} // Updated default value to "0"
-                onValueChange={(value) => setValue("servicioId", Number.parseInt(value))}
+                onValueChange={(value) => {
+                  const servicioId = Number.parseInt(value);
+                  setValue("servicioId", servicioId);
+                  
+                  // Limpiar productos usados al cambiar de servicio
+                  if (productosUsados.length > 0) {
+                    setProductosUsados([]);
+                    setValue("productosUsados", []);
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona un servicio" />
@@ -360,7 +410,14 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Productos Usados</Label>
-              <Button type="button" variant="outline" size="sm" onClick={agregarProducto}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={agregarProducto} 
+                disabled={!selectedServicioId}
+                title={!selectedServicioId ? "Selecciona un servicio primero" : "Agregar producto"}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Agregar Producto
               </Button>
@@ -373,16 +430,31 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                   <Select
                     value={producto.productoId.toString()}
                     onValueChange={(value) => actualizarProducto(index, "productoId", Number.parseInt(value))}
+                    disabled={!selectedServicioId || loadingProductos}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona producto" />
+                      {loadingProductos ? (
+                        <span className="text-muted-foreground">Cargando productos...</span>
+                      ) : (
+                        <SelectValue placeholder={!selectedServicioId ? "Selecciona un servicio primero" : "Selecciona producto"} />
+                      )}
                     </SelectTrigger>
                     <SelectContent>
-                      {productos.map((prod) => (
-                        <SelectItem key={prod.id} value={prod.id.toString()}>
-                          {prod.nombre}
+                      {productos.length === 0 ? (
+                        <SelectItem value="0" disabled>
+                          {!selectedServicioId 
+                            ? "Selecciona un servicio primero" 
+                            : loadingProductos 
+                              ? "Cargando productos..." 
+                              : "No hay productos disponibles"}
                         </SelectItem>
-                      ))}
+                      ) : (
+                        productos.map((prod) => (
+                          <SelectItem key={prod.id} value={prod.id.toString()}>
+                            {prod.nombre} {prod.precio && `- $${prod.precio}`}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
