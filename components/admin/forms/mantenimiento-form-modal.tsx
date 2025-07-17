@@ -58,7 +58,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const [trabajadores, setTrabajadores] = useState<any[]>([])
   const [productos, setProductos] = useState<any[]>([])
   const [productosUsados, setProductosUsados] = useState<
-    Array<{ productoId: number; cantidadUsada: number; precioEnUso: number }>
+    Array<{ productoId: number; cantidadUsada: number; precioEnUso: number; subtotal: number }>
   >([])
   const [vehiculoSearch, setVehiculoSearch] = useState("")
   const [openVehiculoCombobox, setOpenVehiculoCombobox] = useState(false)
@@ -120,6 +120,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
         productoId: p.producto.id,
         cantidadUsada: p.cantidadUsada,
         precioEnUso: p.precioEnUso,
+        subtotal: p.precioEnUso * p.cantidadUsada
       }))
       setProductosUsados(productosFormateados)
       setValue("productosUsados", productosFormateados)
@@ -184,7 +185,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
       return
     }
     
-    const nuevosProductos = [...productosUsados, { productoId: 0, cantidadUsada: 1, precioEnUso: 0 }]
+    const nuevosProductos = [...productosUsados, { productoId: 0, cantidadUsada: 1, precioEnUso: 0, subtotal: 0 }]
     setProductosUsados(nuevosProductos)
     setValue("productosUsados", nuevosProductos)
   }
@@ -198,6 +199,23 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const actualizarProducto = (index: number, campo: string, valor: any) => {
     const nuevosProductos = [...productosUsados]
     nuevosProductos[index] = { ...nuevosProductos[index], [campo]: valor }
+    
+    // Si se actualiza el producto o la cantidad, actualizar el precio y subtotal
+    if (campo === "productoId") {
+      const productoSeleccionado = productos.find(p => p.id === valor)
+      if (productoSeleccionado?.precio) {
+        nuevosProductos[index].precioEnUso = productoSeleccionado.precio
+        nuevosProductos[index].subtotal = productoSeleccionado.precio * nuevosProductos[index].cantidadUsada
+      } else {
+        nuevosProductos[index].precioEnUso = 0
+        nuevosProductos[index].subtotal = 0
+      }
+    } else if (campo === "cantidadUsada") {
+      nuevosProductos[index].subtotal = nuevosProductos[index].precioEnUso * valor
+    } else if (campo === "precioEnUso") {
+      nuevosProductos[index].subtotal = valor * nuevosProductos[index].cantidadUsada
+    }
+    
     setProductosUsados(nuevosProductos)
     setValue("productosUsados", nuevosProductos)
   }
@@ -240,7 +258,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mantenimiento ? "Editar Mantenimiento" : "Crear Nuevo Mantenimiento"}</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -354,7 +372,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                   <SelectValue placeholder="Sin asignar" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Sin asignar</SelectItem> // Updated value to "0"
+                  <SelectItem value="0">Sin asignar</SelectItem>
                   {trabajadores.map((trabajador) => (
                     <SelectItem key={trabajador.id} value={trabajador.id.toString()}>
                       {trabajador.usuario.nombreCompleto} - {trabajador.especialidad}
@@ -378,8 +396,6 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                   <SelectItem value="SOLICITADO">SOLICITADO</SelectItem>
                   <SelectItem value="PENDIENTE">PENDIENTE</SelectItem>
                   <SelectItem value="EN_PROCESO">EN_PROCESO</SelectItem>
-                  <SelectItem value="COMPLETADO">COMPLETADO</SelectItem>
-                  <SelectItem value="CANCELADO">CANCELADO</SelectItem>
                 </SelectContent>
               </Select>
               {errors.estado && <p className="text-sm text-red-500">{errors.estado.message}</p>}
@@ -424,15 +440,15 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
             </div>
 
             {productosUsados.map((producto, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
-                <div className="space-y-2">
+              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 border rounded-lg">
+                <div className="space-y-1">
                   <Label>Producto</Label>
                   <Select
                     value={producto.productoId.toString()}
                     onValueChange={(value) => actualizarProducto(index, "productoId", Number.parseInt(value))}
                     disabled={!selectedServicioId || loadingProductos}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9">
                       {loadingProductos ? (
                         <span className="text-muted-foreground">Cargando productos...</span>
                       ) : (
@@ -457,31 +473,42 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                       )}
                     </SelectContent>
                   </Select>
+                  {producto.productoId > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      Precio: ${producto.precioEnUso.toFixed(2)}
+                    </div>
+                  )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label>Cantidad</Label>
                   <Input
                     type="number"
                     min="1"
                     value={producto.cantidadUsada}
                     onChange={(e) => actualizarProducto(index, "cantidadUsada", Number.parseInt(e.target.value))}
+                    className="h-9"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Precio</Label>
+                <div className="space-y-1">
+                  <Label>Subtotal</Label>
                   <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={producto.precioEnUso}
-                    onChange={(e) => actualizarProducto(index, "precioEnUso", Number.parseFloat(e.target.value))}
+                    type="text"
+                    value={`$${producto.subtotal.toFixed(2)}`}
+                    readOnly
+                    className="bg-muted cursor-not-allowed h-9"
                   />
                 </div>
 
-                <div className="flex items-end">
-                  <Button type="button" variant="outline" size="sm" onClick={() => eliminarProducto(index)}>
+                <div className="flex items-end justify-center">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => eliminarProducto(index)}
+                    className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
