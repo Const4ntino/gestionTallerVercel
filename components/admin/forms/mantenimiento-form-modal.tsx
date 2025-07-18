@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Separator } from "@/components/ui/separator"
 import { Plus, Trash2, Check, ChevronsUpDown } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -70,7 +71,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const [searchServicio, setSearchServicio] = useState("")
   const [openServicioCombobox, setOpenServicioCombobox] = useState(false)
   const [searchProducto, setSearchProducto] = useState("")
-  const [openProductoCombobox, setOpenProductoCombobox] = useState<number>(-1) // Usar número para identificar qué producto está abierto
+  const [openProductoCombobox, setOpenProductoCombobox] = useState<number>(-1)
   const [loadingTalleres, setLoadingTalleres] = useState(false)
   const [loadingServicios, setLoadingServicios] = useState(false)
 
@@ -113,7 +114,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   // Cargar productos cuando cambia el servicio seleccionado
   useEffect(() => {
     if (selectedServicioId) {
-      const servicio = servicios.find(s => s.id === selectedServicioId)
+      const servicio = servicios.find((s) => s.id === selectedServicioId)
       if (servicio?.taller?.id) {
         loadProductosByTaller(servicio.taller.id)
       }
@@ -143,7 +144,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
         productoId: p.producto.id,
         cantidadUsada: p.cantidadUsada,
         precioEnUso: p.precioEnUso,
-        subtotal: p.precioEnUso * p.cantidadUsada
+        subtotal: p.precioEnUso * p.cantidadUsada,
       }))
       setProductosUsados(productosFormateados)
       setValue("productosUsados", productosFormateados)
@@ -186,13 +187,12 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
             productoId: p.producto.id,
             cantidadUsada: p.cantidadUsada,
             precioEnUso: p.precioEnUso,
-            subtotal: p.cantidadUsada * p.precioEnUso
+            subtotal: p.cantidadUsada * p.precioEnUso,
           }))
           setProductosUsados(productosFormateados)
           setValue("productosUsados", productosFormateados)
         }
       }
-
     } catch (error) {
       toast.error("Error al cargar datos")
       console.error(error)
@@ -289,7 +289,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
     // Si se actualiza el producto o la cantidad, actualizar el precio y subtotal
     if (campo === "productoId") {
-      const productoSeleccionado = productos.find(p => p.id === valor)
+      const productoSeleccionado = productos.find((p) => p.id === valor)
       if (productoSeleccionado?.precio) {
         nuevosProductos[index].precioEnUso = productoSeleccionado.precio
         nuevosProductos[index].subtotal = productoSeleccionado.precio * nuevosProductos[index].cantidadUsada
@@ -317,11 +317,13 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
         tallerId: Number(data.tallerId),
         servicioId: Number(data.servicioId),
         trabajadorId: data.trabajadorId ? Number(data.trabajadorId) : null,
-        productosUsados: productosUsados.filter(p => p.productoId > 0).map(p => ({
-          productoId: p.productoId,
-          cantidadUsada: p.cantidadUsada,
-          precioEnUso: p.precioEnUso
-        })),
+        productosUsados: productosUsados
+          .filter((p) => p.productoId > 0)
+          .map((p) => ({
+            productoId: p.productoId,
+            cantidadUsada: p.cantidadUsada,
+            precioEnUso: p.precioEnUso,
+          })),
       }
 
       if (mantenimiento) {
@@ -350,7 +352,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>{mantenimiento ? "Editar Mantenimiento" : "Crear Nuevo Mantenimiento"}</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -358,338 +360,99 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Taller */}
-            <div className="space-y-2">
-              <Label htmlFor="tallerId">Taller</Label>
-              <Select
-                value={watch("tallerId")?.toString() || "0"}
-                onValueChange={(value) => {
-                  const tallerId = Number.parseInt(value);
-                  setValue("tallerId", tallerId);
-                  // Reset servicio y productos al cambiar de taller
-                  setValue("servicioId", 0);
-                  setProductos([]);
-                  setProductosUsados([]);
-                  setValue("productosUsados", []);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un taller" />
-                </SelectTrigger>
-                <SelectContent>
-                  {talleres.map((taller) => (
-                    <SelectItem key={taller.id} value={taller.id.toString()}>
-                      {taller.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.tallerId && (
-                <p className="text-sm text-red-500">{errors.tallerId.message}</p>
-              )}
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full">
+          {/* Contenido principal con layout horizontal */}
+          <div className="flex flex-1 gap-6 overflow-hidden">
+            {/* SECCIÓN DE DATOS - Lado izquierdo */}
+            <div className="flex-1 space-y-4 overflow-y-auto pr-2">
+              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Datos del Mantenimiento</h3>
 
-            {/* Servicio */}
-            <div className="space-y-2">
-              <Label htmlFor="servicioId">Servicio</Label>
-              <Popover open={openServicioCombobox} onOpenChange={(open) => {
-                setOpenServicioCombobox(open);
-                if (!open) setSearchServicio("");
-              }}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openServicioCombobox}
-                    className="w-full justify-between"
-                    disabled={!watch("tallerId") || loadingServicios}
+              {/* Taller y Servicio */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="tallerId">Taller</Label>
+                  <Select
+                    value={watch("tallerId")?.toString() || "0"}
+                    onValueChange={(value) => {
+                      const tallerId = Number.parseInt(value)
+                      setValue("tallerId", tallerId)
+                      setValue("servicioId", 0)
+                      setProductos([])
+                      setProductosUsados([])
+                      setValue("productosUsados", [])
+                    }}
                   >
-                    <span className="truncate">
-                      {watch("servicioId") && selectedServicio
-                        ? `${selectedServicio.nombre} ${selectedServicio.precioBase ? `- S/ ${selectedServicio.precioBase.toFixed(2)}` : ''}`
-                        : loadingServicios
-                        ? "Cargando servicios..."
-                        : !watch("tallerId")
-                        ? "Selecciona un taller primero"
-                        : "Selecciona un servicio"}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
-                  <Command>
-                    <CommandInput 
-                      placeholder="Buscar servicio por nombre..." 
-                      value={searchServicio}
-                      onValueChange={setSearchServicio}
-                      className="h-9"
-                    />
-                    <CommandList className="max-h-[300px] overflow-auto">
-                      <CommandEmpty>No se encontraron servicios</CommandEmpty>
-                      <CommandGroup>
-                        {servicios
-                          .filter(servicio => 
-                            searchServicio === '' || 
-                            servicio.nombre.toLowerCase().includes(searchServicio.toLowerCase())
-                          )
-                          .map((servicio) => (
-                            <CommandItem
-                              key={servicio.id}
-                              value={servicio.nombre}
-                              onSelect={() => {
-                                setValue("servicioId", servicio.id);
-                                setOpenServicioCombobox(false);
-                                // Limpiar productos al cambiar de servicio
-                                setProductos([]);
-                                setProductosUsados([]);
-                                setValue("productosUsados", []);
-                                setSearchServicio("");
-                              }}
-                              className="flex items-center justify-between px-3 py-2"
-                            >
-                              <div className="flex items-center">
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4 flex-shrink-0",
-                                    servicio.id === watch("servicioId") ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <span className="font-medium">{servicio.nombre}</span>
-                              </div>
-                              {servicio.precioBase !== undefined && (
-                                <span className="ml-4 whitespace-nowrap text-sm text-muted-foreground">
-                                  S/ {servicio.precioBase.toFixed(2)}
-                                </span>
-                              )}
-                            </CommandItem>
-                          ))}
-                        {servicios.length === 0 && (
-                          <CommandItem className="text-muted-foreground" disabled>
-                            {!watch("tallerId") 
-                              ? "Selecciona un taller primero"
-                              : "No hay servicios disponibles"}
-                          </CommandItem>
-                        )}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un taller" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {talleres.map((taller) => (
+                        <SelectItem key={taller.id} value={taller.id.toString()}>
+                          {taller.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.tallerId && <p className="text-sm text-red-500">{errors.tallerId.message}</p>}
+                </div>
 
-              {errors.servicioId && <p className="text-sm text-red-500">{errors.servicioId.message}</p>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {/* Vehículo con búsqueda */}
-            <div className="space-y-2">
-              <Label htmlFor="vehiculoId">Vehículo</Label>
-              <Popover open={openVehiculoCombobox} onOpenChange={setOpenVehiculoCombobox}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openVehiculoCombobox}
-                    className="w-full justify-between bg-transparent"
+                <div className="space-y-2">
+                  <Label htmlFor="servicioId">Servicio</Label>
+                  <Popover
+                    open={openServicioCombobox}
+                    onOpenChange={(open) => {
+                      setOpenServicioCombobox(open)
+                      if (!open) setSearchServicio("")
+                    }}
                   >
-                    {selectedVehiculo
-                      ? `${selectedVehiculo.placa} - ${selectedVehiculo.marca} ${selectedVehiculo.modelo}`
-                      : "Selecciona un vehículo..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  <Command>
-                    <CommandInput
-                      placeholder="Buscar vehículo por placa, marca o modelo..."
-                      value={vehiculoSearch}
-                      onValueChange={(value) => {
-                        setVehiculoSearch(value)
-                        searchVehiculos(value)
-                      }}
-                    />
-                    <CommandList>
-                      <CommandEmpty>No se encontraron vehículos.</CommandEmpty>
-                      <CommandGroup>
-                        {vehiculos.map((vehiculo) => (
-                          <CommandItem
-                            key={vehiculo.id}
-                            value={`${vehiculo.placa} ${vehiculo.marca} ${vehiculo.modelo}`}
-                            onSelect={() => {
-                              setValue("vehiculoId", vehiculo.id)
-                              setOpenVehiculoCombobox(false)
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedVehiculoId === vehiculo.id ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo}
-                              </span>
-                              <span className="text-sm text-muted-foreground">
-                                Cliente: {vehiculo.cliente.usuario.nombreCompleto}
-                              </span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              {errors.vehiculoId && <p className="text-sm text-red-500">{errors.vehiculoId.message}</p>}
-            </div>
-
-            {/* Trabajador */}
-            <div className="space-y-2">
-              <Label htmlFor="trabajadorId">Trabajador (Opcional)</Label>
-              <Select
-                value={watch("trabajadorId")?.toString() || "0"} // Updated default value to "0"
-                onValueChange={(value) => setValue("trabajadorId", value ? Number.parseInt(value) : undefined)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sin asignar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Sin asignar</SelectItem>
-                  {trabajadores.map((trabajador) => (
-                    <SelectItem key={trabajador.id} value={trabajador.id.toString()}>
-                      {trabajador.usuario.nombreCompleto} - {trabajador.especialidad}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Estado */}
-            <div className="space-y-2">
-              <Label htmlFor="estado">Estado</Label>
-              <Select
-                value={watch("estado")}
-                onValueChange={(value) => setValue("estado", value as MantenimientoEstado)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SOLICITADO">SOLICITADO</SelectItem>
-                  <SelectItem value="PENDIENTE">PENDIENTE</SelectItem>
-                  <SelectItem value="EN_PROCESO">EN_PROCESO</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.estado && <p className="text-sm text-red-500">{errors.estado.message}</p>}
-            </div>
-          </div>
-
-          {/* Observaciones del Cliente */}
-          <div className="space-y-2">
-            <Label htmlFor="observacionesCliente">Observaciones del Cliente</Label>
-            <Textarea
-              {...register("observacionesCliente")}
-              placeholder="Observaciones o comentarios del cliente"
-              rows={3}
-            />
-          </div>
-
-          {/* Observaciones del Trabajador */}
-          <div className="space-y-2">
-            <Label htmlFor="observacionesTrabajador">Observaciones del Trabajador</Label>
-            <Textarea
-              {...register("observacionesTrabajador")}
-              placeholder="Observaciones del trabajador"
-              className="min-h-[100px]"
-            />
-          </div>
-
-          {/* Sección de Productos */}
-          <div className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Productos Utilizados</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={agregarProducto}
-                disabled={!selectedServicioId}
-                className="flex items-center gap-1"
-              >
-                <Plus className="h-4 w-4" />
-                Agregar Producto
-              </Button>
-            </div>
-          </div>
-
-          {productosUsados.map((producto, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 border rounded-lg">
-              <div className="space-y-1">
-                <Label>Producto</Label>
-                <Popover 
-                  open={index === openProductoCombobox} 
-                  onOpenChange={(open) => {
-                    setOpenProductoCombobox(open ? index : -1);
-                    if (!open) setSearchProducto("");
-                  }}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={index === openProductoCombobox}
-                      className="w-full justify-between h-9"
-                      disabled={!selectedServicioId || loadingProductos}
-                    >
-                      <span className="truncate">
-                        {producto.productoId > 0 && productos.find(p => p.id === producto.productoId)
-                          ? `${productos.find(p => p.id === producto.productoId)?.nombre} ${productos.find(p => p.id === producto.productoId)?.precio ? `- S/${Number(productos.find(p => p.id === producto.productoId)?.precio).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : ''}`
-                          : loadingProductos
-                          ? "Cargando productos..."
-                          : !selectedServicioId
-                          ? "Selecciona un servicio primero"
-                          : "Selecciona producto"}
-                      </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
-                      <CommandInput 
-                        placeholder="Buscar producto por nombre..." 
-                        value={searchProducto}
-                        onValueChange={setSearchProducto}
-                        className="h-9"
-                      />
-                      <CommandList className="max-h-[300px] overflow-auto">
-                        <CommandEmpty>No se encontraron productos</CommandEmpty>
-                        <CommandGroup>
-                          {productos.length === 0 ? (
-                            <CommandItem disabled>
-                              {!selectedServicioId
-                                ? "Selecciona un servicio primero"
-                                : loadingProductos
-                                  ? "Cargando productos..."
-                                  : "No hay productos disponibles"}
-                            </CommandItem>
-                          ) : (
-                            productos
-                              .filter(prod => 
-                                // Filtrar por nombre y por stock disponible
-                                (searchProducto === '' || 
-                                prod.nombre.toLowerCase().includes(searchProducto.toLowerCase())) &&
-                                prod.stock > 0
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openServicioCombobox}
+                        className="w-full justify-between bg-transparent"
+                        disabled={!watch("tallerId") || loadingServicios}
+                      >
+                        <span className="truncate">
+                          {watch("servicioId") && selectedServicio
+                            ? `${selectedServicio.nombre} ${selectedServicio.precioBase ? `- S/ ${selectedServicio.precioBase.toFixed(2)}` : ""}`
+                            : loadingServicios
+                              ? "Cargando servicios..."
+                              : !watch("tallerId")
+                                ? "Selecciona un taller primero"
+                                : "Selecciona un servicio"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Buscar servicio por nombre..."
+                          value={searchServicio}
+                          onValueChange={setSearchServicio}
+                          className="h-9"
+                        />
+                        <CommandList className="max-h-[300px] overflow-auto">
+                          <CommandEmpty>No se encontraron servicios</CommandEmpty>
+                          <CommandGroup>
+                            {servicios
+                              .filter(
+                                (servicio) =>
+                                  searchServicio === "" ||
+                                  servicio.nombre.toLowerCase().includes(searchServicio.toLowerCase()),
                               )
-                              .map((prod) => (
+                              .map((servicio) => (
                                 <CommandItem
-                                  key={prod.id}
-                                  value={prod.nombre}
+                                  key={servicio.id}
+                                  value={servicio.nombre}
                                   onSelect={() => {
-                                    actualizarProducto(index, "productoId", prod.id);
-                                    setOpenProductoCombobox(-1);
+                                    setValue("servicioId", servicio.id)
+                                    setOpenServicioCombobox(false)
+                                    setProductos([])
+                                    setProductosUsados([])
+                                    setValue("productosUsados", [])
+                                    setSearchServicio("")
                                   }}
                                   className="flex items-center justify-between px-3 py-2"
                                 >
@@ -697,103 +460,365 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                                     <Check
                                       className={cn(
                                         "mr-2 h-4 w-4 flex-shrink-0",
-                                        producto.productoId === prod.id ? "opacity-100" : "opacity-0"
+                                        servicio.id === watch("servicioId") ? "opacity-100" : "opacity-0",
                                       )}
                                     />
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{prod.nombre}</span>
-                                      <span className={cn(
-                                        "text-xs",
-                                        prod.stock <= 5 ? "text-amber-500 font-medium" : "text-muted-foreground"
-                                      )}>
-                                        Stock disponible: {prod.stock} {prod.stock <= 5 && "(¡Bajo!)"}
-                                      </span>
-                                    </div>
+                                    <span className="font-medium">{servicio.nombre}</span>
                                   </div>
-                                  {prod.precio !== undefined && (
-                                    <span className="ml-4 whitespace-nowrap text-sm font-medium">
-                                      S/{Number(prod.precio).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                  {servicio.precioBase !== undefined && (
+                                    <span className="ml-4 whitespace-nowrap text-sm text-muted-foreground">
+                                      S/ {servicio.precioBase.toFixed(2)}
                                     </span>
                                   )}
                                 </CommandItem>
-                              ))
-                          )}
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {errors.servicioId && <p className="text-sm text-red-500">{errors.servicioId.message}</p>}
+                </div>
+              </div>
+
+              {/* Vehículo */}
+              <div className="space-y-2">
+                <Label htmlFor="vehiculoId">Vehículo</Label>
+                <Popover open={openVehiculoCombobox} onOpenChange={setOpenVehiculoCombobox}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openVehiculoCombobox}
+                      className="w-full justify-between bg-transparent"
+                    >
+                      {selectedVehiculo
+                        ? `${selectedVehiculo.placa} - ${selectedVehiculo.marca} ${selectedVehiculo.modelo}`
+                        : "Selecciona un vehículo..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar vehículo por placa, marca o modelo..."
+                        value={vehiculoSearch}
+                        onValueChange={(value) => {
+                          setVehiculoSearch(value)
+                          searchVehiculos(value)
+                        }}
+                      />
+                      <CommandList>
+                        <CommandEmpty>No se encontraron vehículos.</CommandEmpty>
+                        <CommandGroup>
+                          {vehiculos.map((vehiculo) => (
+                            <CommandItem
+                              key={vehiculo.id}
+                              value={`${vehiculo.placa} ${vehiculo.marca} ${vehiculo.modelo}`}
+                              onSelect={() => {
+                                setValue("vehiculoId", vehiculo.id)
+                                setOpenVehiculoCombobox(false)
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedVehiculoId === vehiculo.id ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                  Cliente: {vehiculo.cliente.usuario.nombreCompleto}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
                         </CommandGroup>
                       </CommandList>
                     </Command>
                   </PopoverContent>
                 </Popover>
-                {producto.productoId > 0 && (
-                  <div className="flex flex-col gap-1">
-                    <div className="text-xs text-muted-foreground">
-                      Precio: <span className="font-medium">S/{Number(producto.precioEnUso).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                    </div>
-                    {productos.find(p => p.id === producto.productoId)?.stock && (
-                      <div className={cn(
-                        "text-xs",
-                        (productos.find(p => p.id === producto.productoId)?.stock || 0) <= 5 
-                          ? "text-amber-500 font-medium" 
-                          : "text-muted-foreground"
-                      )}>
-                        Stock disponible: {productos.find(p => p.id === producto.productoId)?.stock}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {errors.vehiculoId && <p className="text-sm text-red-500">{errors.vehiculoId.message}</p>}
               </div>
 
-              <div className="space-y-1">
-                <Label>Cantidad</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  max={producto.productoId > 0 ? productos.find(p => p.id === producto.productoId)?.stock || 1 : 1}
-                  value={producto.cantidadUsada}
-                  onChange={(e) => {
-                    const newValue = Number.parseInt(e.target.value);
-                    const maxStock = producto.productoId > 0 ? productos.find(p => p.id === producto.productoId)?.stock || 1 : 1;
-                    // Limitar la cantidad al stock disponible
-                    const limitedValue = Math.min(newValue, maxStock);
-                    actualizarProducto(index, "cantidadUsada", limitedValue);
-                  }}
-                  className="h-9"
-                />
+              {/* Trabajador y Estado */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="trabajadorId">Trabajador (Opcional)</Label>
+                  <Select
+                    value={watch("trabajadorId")?.toString() || "0"}
+                    onValueChange={(value) => setValue("trabajadorId", value ? Number.parseInt(value) : undefined)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Sin asignar</SelectItem>
+                      {trabajadores.map((trabajador) => (
+                        <SelectItem key={trabajador.id} value={trabajador.id.toString()}>
+                          {trabajador.usuario.nombreCompleto} - {trabajador.especialidad}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estado">Estado</Label>
+                  <Select
+                    value={watch("estado")}
+                    onValueChange={(value) => setValue("estado", value as MantenimientoEstado)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SOLICITADO">SOLICITADO</SelectItem>
+                      <SelectItem value="PENDIENTE">PENDIENTE</SelectItem>
+                      <SelectItem value="EN_PROCESO">EN_PROCESO</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.estado && <p className="text-sm text-red-500">{errors.estado.message}</p>}
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <Label>Subtotal</Label>
-                <Input
-                  type="text"
-                  value={`S/${Number(producto.subtotal).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
-                  readOnly
-                  className="bg-muted cursor-not-allowed h-9"
-                />
-              </div>
+              {/* Observaciones */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="observacionesCliente">Observaciones del Cliente</Label>
+                  <Textarea
+                    {...register("observacionesCliente")}
+                    placeholder="Observaciones o comentarios del cliente"
+                    rows={3}
+                  />
+                </div>
 
-              <div className="flex items-end justify-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => eliminarProducto(index)}
-                  className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="observacionesTrabajador">Observaciones del Trabajador</Label>
+                  <Textarea
+                    {...register("observacionesTrabajador")}
+                    placeholder="Observaciones del trabajador"
+                    rows={3}
+                  />
+                </div>
               </div>
             </div>
-          ))}
 
-        <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Guardando..." : mantenimiento ? "Actualizar" : "Crear"}
-          </Button>
-        </div>
-      </form>
-    </DialogContent>
-    </Dialog >
+            {/* SEPARADOR VERTICAL */}
+            <Separator orientation="vertical" className="h-auto" />
+
+            {/* SECCIÓN DE PRODUCTOS - Lado derecho */}
+            <div className="flex-1 space-y-4 overflow-y-auto pl-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 flex-1">Productos Utilizados</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={agregarProducto}
+                  disabled={!selectedServicioId}
+                  className="flex items-center gap-1 ml-4 bg-transparent"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                {productosUsados.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No hay productos agregados</p>
+                    <p className="text-sm">Selecciona un servicio y haz clic en "Agregar" para comenzar</p>
+                  </div>
+                ) : (
+                  productosUsados.map((producto, index) => (
+                    <div key={index} className="grid grid-cols-1 gap-3 p-4 border rounded-lg bg-gray-50">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Producto</Label>
+                        <Popover
+                          open={index === openProductoCombobox}
+                          onOpenChange={(open) => {
+                            setOpenProductoCombobox(open ? index : -1)
+                            if (!open) setSearchProducto("")
+                          }}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={index === openProductoCombobox}
+                              className="w-full justify-between h-9 bg-transparent"
+                              disabled={!selectedServicioId || loadingProductos}
+                            >
+                              <span className="truncate">
+                                {producto.productoId > 0 && productos.find((p) => p.id === producto.productoId)
+                                  ? `${productos.find((p) => p.id === producto.productoId)?.nombre}`
+                                  : loadingProductos
+                                    ? "Cargando productos..."
+                                    : !selectedServicioId
+                                      ? "Selecciona un servicio primero"
+                                      : "Selecciona producto"}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[400px] p-0" align="start">
+                            <Command>
+                              <CommandInput
+                                placeholder="Buscar producto por nombre..."
+                                value={searchProducto}
+                                onValueChange={setSearchProducto}
+                                className="h-9"
+                              />
+                              <CommandList className="max-h-[300px] overflow-auto">
+                                <CommandEmpty>No se encontraron productos</CommandEmpty>
+                                <CommandGroup>
+                                  {productos.length === 0 ? (
+                                    <CommandItem disabled>
+                                      {!selectedServicioId
+                                        ? "Selecciona un servicio primero"
+                                        : loadingProductos
+                                          ? "Cargando productos..."
+                                          : "No hay productos disponibles"}
+                                    </CommandItem>
+                                  ) : (
+                                    productos
+                                      .filter(
+                                        (prod) =>
+                                          (searchProducto === "" ||
+                                            prod.nombre.toLowerCase().includes(searchProducto.toLowerCase())) &&
+                                          prod.stock > 0,
+                                      )
+                                      .map((prod) => (
+                                        <CommandItem
+                                          key={prod.id}
+                                          value={prod.nombre}
+                                          onSelect={() => {
+                                            actualizarProducto(index, "productoId", prod.id)
+                                            setOpenProductoCombobox(-1)
+                                          }}
+                                          className="flex items-center justify-between px-3 py-2"
+                                        >
+                                          <div className="flex items-center">
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4 flex-shrink-0",
+                                                producto.productoId === prod.id ? "opacity-100" : "opacity-0",
+                                              )}
+                                            />
+                                            <div className="flex flex-col">
+                                              <span className="font-medium">{prod.nombre}</span>
+                                              <span
+                                                className={cn(
+                                                  "text-xs",
+                                                  prod.stock <= 5
+                                                    ? "text-amber-500 font-medium"
+                                                    : "text-muted-foreground",
+                                                )}
+                                              >
+                                                Stock: {prod.stock} {prod.stock <= 5 && "(¡Bajo!)"}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          {prod.precio !== undefined && (
+                                            <span className="ml-4 whitespace-nowrap text-sm font-medium">
+                                              S/
+                                              {Number(prod.precio).toLocaleString("es-PE", {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                              })}
+                                            </span>
+                                          )}
+                                        </CommandItem>
+                                      ))
+                                  )}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-sm">Cantidad</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max={
+                              producto.productoId > 0
+                                ? productos.find((p) => p.id === producto.productoId)?.stock || 1
+                                : 1
+                            }
+                            value={producto.cantidadUsada}
+                            onChange={(e) => {
+                              const newValue = Number.parseInt(e.target.value)
+                              const maxStock =
+                                producto.productoId > 0
+                                  ? productos.find((p) => p.id === producto.productoId)?.stock || 1
+                                  : 1
+                              const limitedValue = Math.min(newValue, maxStock)
+                              actualizarProducto(index, "cantidadUsada", limitedValue)
+                            }}
+                            className="h-9"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-sm">Precio</Label>
+                          <Input
+                            type="text"
+                            value={`S/${Number(producto.precioEnUso).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                            readOnly
+                            className="bg-muted cursor-not-allowed h-9 text-sm"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-sm">Subtotal</Label>
+                          <Input
+                            type="text"
+                            value={`S/${Number(producto.subtotal).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                            readOnly
+                            className="bg-muted cursor-not-allowed h-9 text-sm font-medium"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => eliminarProducto(index)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Eliminar
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* BOTONES - Parte inferior */}
+          <Separator className="my-4" />
+          <div className="flex justify-end space-x-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Guardando..." : mantenimiento ? "Actualizar" : "Crear"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
