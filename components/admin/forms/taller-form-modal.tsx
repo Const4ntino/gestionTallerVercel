@@ -137,7 +137,6 @@ export function TallerFormModal({ open, onOpenChange, taller, onSuccess }: Talle
                 <SelectContent>
                   <SelectItem value="ACTIVO">Activo</SelectItem>
                   <SelectItem value="SUSPENDIDO">Suspendido</SelectItem>
-                  <SelectItem value="INACTIVO">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
             </div>

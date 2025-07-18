@@ -68,7 +68,7 @@ export const obtenerMantenimiento = async (id: number): Promise<MantenimientoRes
 }
 
 export const obtenerMisVehiculosParaMantenimiento = async (): Promise<VehiculoResponse[]> => {
-  const response = await fetch(`${API_BASE_URL}/api/clientes/mis-vehiculos/filtrar?size=100`, {
+  const response = await fetch(`${API_BASE_URL}/api/clientes/mis-vehiculos/filtrar?size=100&estado=ACTIVO`, {
     headers: getAuthHeaders(),
   })
 

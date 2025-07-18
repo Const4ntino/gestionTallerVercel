@@ -22,10 +22,13 @@ import {
   trabajadoresMantenimientoApi,
   productosMantenimientoApi,
 } from "@/lib/mantenimientos-api"
+import { talleresApi } from "@/lib/admin-api"
 import type { MantenimientoResponse, MantenimientoEstado, VehiculoResponse } from "@/types/mantenimientos"
+import type { TallerResponse } from "@/types/talleres"
 
 const mantenimientoSchema = z.object({
   vehiculoId: z.number().min(1, "Debe seleccionar un vehículo"),
+  tallerId: z.number().min(1, "Debe seleccionar un taller"),
   servicioId: z.number().min(1, "Debe seleccionar un servicio"),
   trabajadorId: z.number().optional(),
   estado: z.enum(["SOLICITADO", "PENDIENTE", "EN_PROCESO", "COMPLETADO", "CANCELADO"]),
@@ -54,6 +57,7 @@ interface MantenimientoFormModalProps {
 export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSuccess }: MantenimientoFormModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
+  const [talleres, setTalleres] = useState<TallerResponse[]>([])
   const [servicios, setServicios] = useState<any[]>([])
   const [trabajadores, setTrabajadores] = useState<any[]>([])
   const [productos, setProductos] = useState<any[]>([])
@@ -63,6 +67,12 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const [vehiculoSearch, setVehiculoSearch] = useState("")
   const [openVehiculoCombobox, setOpenVehiculoCombobox] = useState(false)
   const [loadingProductos, setLoadingProductos] = useState(false)
+  const [searchServicio, setSearchServicio] = useState("")
+  const [openServicioCombobox, setOpenServicioCombobox] = useState(false)
+  const [searchProducto, setSearchProducto] = useState("")
+  const [openProductoCombobox, setOpenProductoCombobox] = useState<number>(-1) // Usar número para identificar qué producto está abierto
+  const [loadingTalleres, setLoadingTalleres] = useState(false)
+  const [loadingServicios, setLoadingServicios] = useState(false)
 
   const {
     register,
@@ -81,12 +91,24 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
   const selectedVehiculoId = watch("vehiculoId")
   const selectedServicioId = watch("servicioId")
+  const selectedTallerId = watch("tallerId")
 
   useEffect(() => {
     if (open) {
       loadData()
     }
   }, [open])
+
+  // Cargar servicios cuando cambia el taller seleccionado
+  useEffect(() => {
+    if (selectedTallerId) {
+      loadServiciosByTaller(selectedTallerId)
+    } else {
+      // Limpiar servicios si no hay taller seleccionado
+      setServicios([])
+      setValue("servicioId", 0)
+    }
+  }, [selectedTallerId])
 
   // Cargar productos cuando cambia el servicio seleccionado
   useEffect(() => {
@@ -98,7 +120,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     } else {
       // Limpiar productos si no hay servicio seleccionado
       setProductos([])
-      
+
       // Si hay productos usados, los limpiamos
       if (productosUsados.length > 0) {
         setProductosUsados([])
@@ -110,6 +132,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   useEffect(() => {
     if (mantenimiento) {
       setValue("vehiculoId", mantenimiento.vehiculo.id)
+      setValue("tallerId", mantenimiento.servicio.taller.id)
       setValue("servicioId", mantenimiento.servicio.id)
       setValue("trabajadorId", mantenimiento.trabajador?.id)
       setValue("estado", mantenimiento.estado)
@@ -136,23 +159,87 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const loadData = async () => {
     try {
       setIsLoading(true)
-      const [vehiculosData, serviciosData, trabajadoresData] = await Promise.all([
+      const [vehiculosData, trabajadoresData] = await Promise.all([
         vehiculosApi.filter("", "ACTIVO"),
-        serviciosMantenimientoApi.getAll(),
         trabajadoresMantenimientoApi.getAll(),
       ])
 
       setVehiculos(vehiculosData.content || [])
-      setServicios(serviciosData)
       setTrabajadores(trabajadoresData)
-      
-      // No cargamos productos aquí, esperamos a que se seleccione un servicio
-      setProductos([])
+
+      // Cargar talleres
+      await loadTalleres()
+
+      // Si estamos editando un mantenimiento, cargar los datos correspondientes
+      if (mantenimiento) {
+        setValue("vehiculoId", mantenimiento.vehiculo.id)
+        setValue("tallerId", mantenimiento.servicio.taller.id)
+        setValue("servicioId", mantenimiento.servicio.id)
+        setValue("trabajadorId", mantenimiento.trabajador?.id)
+        setValue("estado", mantenimiento.estado)
+        setValue("observacionesCliente", mantenimiento.observacionesCliente || "")
+        setValue("observacionesTrabajador", mantenimiento.observacionesTrabajador || "")
+
+        // Cargar productos usados si los hay
+        if (mantenimiento.productosUsados && mantenimiento.productosUsados.length > 0) {
+          const productosFormateados = mantenimiento.productosUsados.map((p) => ({
+            productoId: p.producto.id,
+            cantidadUsada: p.cantidadUsada,
+            precioEnUso: p.precioEnUso,
+            subtotal: p.cantidadUsada * p.precioEnUso
+          }))
+          setProductosUsados(productosFormateados)
+          setValue("productosUsados", productosFormateados)
+        }
+      }
+
     } catch (error) {
       toast.error("Error al cargar datos")
       console.error(error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadTalleres = async () => {
+    try {
+      setLoadingTalleres(true)
+      const talleresData = await talleresApi.getAll()
+      setTalleres(talleresData)
+    } catch (error) {
+      toast.error("Error al cargar talleres")
+      console.error(error)
+      setTalleres([])
+    } finally {
+      setLoadingTalleres(false)
+    }
+  }
+
+  const loadServiciosByTaller = async (tallerId: number) => {
+    try {
+      setLoadingServicios(true)
+      const serviciosData = await serviciosMantenimientoApi.getByTaller(tallerId)
+      setServicios(serviciosData)
+
+      // Si solo hay un servicio, lo seleccionamos automáticamente
+      if (serviciosData.length === 1) {
+        setValue("servicioId", serviciosData[0].id)
+      } else {
+        setValue("servicioId", 0)
+      }
+
+      // Limpiar productos al cambiar de taller
+      setProductos([])
+      setProductosUsados([])
+      setValue("productosUsados", [])
+      setValue("productosUsados", [])
+    } catch (error) {
+      toast.error("Error al cargar servicios del taller")
+      console.error(error)
+      setServicios([])
+      setValue("servicioId", 0)
+    } finally {
+      setLoadingServicios(false)
     }
   }
 
@@ -184,7 +271,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
       toast.error("Debes seleccionar un servicio antes de agregar productos")
       return
     }
-    
+
     const nuevosProductos = [...productosUsados, { productoId: 0, cantidadUsada: 1, precioEnUso: 0, subtotal: 0 }]
     setProductosUsados(nuevosProductos)
     setValue("productosUsados", nuevosProductos)
@@ -199,7 +286,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const actualizarProducto = (index: number, campo: string, valor: any) => {
     const nuevosProductos = [...productosUsados]
     nuevosProductos[index] = { ...nuevosProductos[index], [campo]: valor }
-    
+
     // Si se actualiza el producto o la cantidad, actualizar el precio y subtotal
     if (campo === "productoId") {
       const productoSeleccionado = productos.find(p => p.id === valor)
@@ -215,7 +302,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     } else if (campo === "precioEnUso") {
       nuevosProductos[index].subtotal = valor * nuevosProductos[index].cantidadUsada
     }
-    
+
     setProductosUsados(nuevosProductos)
     setValue("productosUsados", nuevosProductos)
   }
@@ -224,21 +311,24 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     try {
       setIsLoading(true)
 
-      const payload = {
-        vehiculoId: data.vehiculoId,
-        servicioId: data.servicioId,
-        trabajadorId: data.trabajadorId || null,
-        estado: data.estado,
-        observacionesCliente: data.observacionesCliente || "",
-        observacionesTrabajador: data.observacionesTrabajador || "",
-        productosUsados: productosUsados.filter((p) => p.productoId > 0),
+      const mantenimientoData = {
+        ...data,
+        vehiculoId: Number(data.vehiculoId),
+        tallerId: Number(data.tallerId),
+        servicioId: Number(data.servicioId),
+        trabajadorId: data.trabajadorId ? Number(data.trabajadorId) : null,
+        productosUsados: productosUsados.filter(p => p.productoId > 0).map(p => ({
+          productoId: p.productoId,
+          cantidadUsada: p.cantidadUsada,
+          precioEnUso: p.precioEnUso
+        })),
       }
 
       if (mantenimiento) {
-        await mantenimientosApi.update(mantenimiento.id, payload)
+        await mantenimientosApi.update(mantenimiento.id, mantenimientoData)
         toast.success("Mantenimiento actualizado correctamente")
       } else {
-        await mantenimientosApi.create(payload)
+        await mantenimientosApi.create(mantenimientoData)
         toast.success("Mantenimiento creado correctamente")
       }
 
@@ -255,6 +345,8 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   }
 
   const selectedVehiculo = vehiculos.find((v) => v.id === selectedVehiculoId)
+  const selectedTaller = talleres.find((t) => t.id === selectedTallerId)
+  const selectedServicio = servicios.find((s) => s.id === selectedServicioId)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -268,6 +360,129 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Taller */}
+            <div className="space-y-2">
+              <Label htmlFor="tallerId">Taller</Label>
+              <Select
+                value={watch("tallerId")?.toString() || "0"}
+                onValueChange={(value) => {
+                  const tallerId = Number.parseInt(value);
+                  setValue("tallerId", tallerId);
+                  // Reset servicio y productos al cambiar de taller
+                  setValue("servicioId", 0);
+                  setProductos([]);
+                  setProductosUsados([]);
+                  setValue("productosUsados", []);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un taller" />
+                </SelectTrigger>
+                <SelectContent>
+                  {talleres.map((taller) => (
+                    <SelectItem key={taller.id} value={taller.id.toString()}>
+                      {taller.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.tallerId && (
+                <p className="text-sm text-red-500">{errors.tallerId.message}</p>
+              )}
+            </div>
+
+            {/* Servicio */}
+            <div className="space-y-2">
+              <Label htmlFor="servicioId">Servicio</Label>
+              <Popover open={openServicioCombobox} onOpenChange={(open) => {
+                setOpenServicioCombobox(open);
+                if (!open) setSearchServicio("");
+              }}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openServicioCombobox}
+                    className="w-full justify-between"
+                    disabled={!watch("tallerId") || loadingServicios}
+                  >
+                    <span className="truncate">
+                      {watch("servicioId") && selectedServicio
+                        ? `${selectedServicio.nombre} ${selectedServicio.precioBase ? `- S/ ${selectedServicio.precioBase.toFixed(2)}` : ''}`
+                        : loadingServicios
+                        ? "Cargando servicios..."
+                        : !watch("tallerId")
+                        ? "Selecciona un taller primero"
+                        : "Selecciona un servicio"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Buscar servicio por nombre..." 
+                      value={searchServicio}
+                      onValueChange={setSearchServicio}
+                      className="h-9"
+                    />
+                    <CommandList className="max-h-[300px] overflow-auto">
+                      <CommandEmpty>No se encontraron servicios</CommandEmpty>
+                      <CommandGroup>
+                        {servicios
+                          .filter(servicio => 
+                            searchServicio === '' || 
+                            servicio.nombre.toLowerCase().includes(searchServicio.toLowerCase())
+                          )
+                          .map((servicio) => (
+                            <CommandItem
+                              key={servicio.id}
+                              value={servicio.nombre}
+                              onSelect={() => {
+                                setValue("servicioId", servicio.id);
+                                setOpenServicioCombobox(false);
+                                // Limpiar productos al cambiar de servicio
+                                setProductos([]);
+                                setProductosUsados([]);
+                                setValue("productosUsados", []);
+                                setSearchServicio("");
+                              }}
+                              className="flex items-center justify-between px-3 py-2"
+                            >
+                              <div className="flex items-center">
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4 flex-shrink-0",
+                                    servicio.id === watch("servicioId") ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <span className="font-medium">{servicio.nombre}</span>
+                              </div>
+                              {servicio.precioBase !== undefined && (
+                                <span className="ml-4 whitespace-nowrap text-sm text-muted-foreground">
+                                  S/ {servicio.precioBase.toFixed(2)}
+                                </span>
+                              )}
+                            </CommandItem>
+                          ))}
+                        {servicios.length === 0 && (
+                          <CommandItem className="text-muted-foreground" disabled>
+                            {!watch("tallerId") 
+                              ? "Selecciona un taller primero"
+                              : "No hay servicios disponibles"}
+                          </CommandItem>
+                        )}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {errors.servicioId && <p className="text-sm text-red-500">{errors.servicioId.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
             {/* Vehículo con búsqueda */}
             <div className="space-y-2">
               <Label htmlFor="vehiculoId">Vehículo</Label>
@@ -331,36 +546,6 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
               {errors.vehiculoId && <p className="text-sm text-red-500">{errors.vehiculoId.message}</p>}
             </div>
 
-            {/* Servicio */}
-            <div className="space-y-2">
-              <Label htmlFor="servicioId">Servicio</Label>
-              <Select
-                value={watch("servicioId")?.toString() || "0"} // Updated default value to "0"
-                onValueChange={(value) => {
-                  const servicioId = Number.parseInt(value);
-                  setValue("servicioId", servicioId);
-                  
-                  // Limpiar productos usados al cambiar de servicio
-                  if (productosUsados.length > 0) {
-                    setProductosUsados([]);
-                    setValue("productosUsados", []);
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un servicio" />
-                </SelectTrigger>
-                <SelectContent>
-                  {servicios.map((servicio) => (
-                    <SelectItem key={servicio.id} value={servicio.id.toString()}>
-                      {servicio.nombre} - {servicio.taller.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.servicioId && <p className="text-sm text-red-500">{errors.servicioId.message}</p>}
-            </div>
-
             {/* Trabajador */}
             <div className="space-y-2">
               <Label htmlFor="trabajadorId">Trabajador (Opcional)</Label>
@@ -417,115 +602,198 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
             <Label htmlFor="observacionesTrabajador">Observaciones del Trabajador</Label>
             <Textarea
               {...register("observacionesTrabajador")}
-              placeholder="Observaciones técnicas del trabajador"
-              rows={3}
+              placeholder="Observaciones del trabajador"
+              className="min-h-[100px]"
             />
           </div>
 
-          {/* Productos Usados */}
-          <div className="space-y-4">
+          {/* Sección de Productos */}
+          <div className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
-              <Label>Productos Usados</Label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={agregarProducto} 
+              <h3 className="text-lg font-medium">Productos Utilizados</h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={agregarProducto}
                 disabled={!selectedServicioId}
-                title={!selectedServicioId ? "Selecciona un servicio primero" : "Agregar producto"}
+                className="flex items-center gap-1"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4" />
                 Agregar Producto
               </Button>
             </div>
+          </div>
 
-            {productosUsados.map((producto, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 border rounded-lg">
-                <div className="space-y-1">
-                  <Label>Producto</Label>
-                  <Select
-                    value={producto.productoId.toString()}
-                    onValueChange={(value) => actualizarProducto(index, "productoId", Number.parseInt(value))}
-                    disabled={!selectedServicioId || loadingProductos}
-                  >
-                    <SelectTrigger className="h-9">
-                      {loadingProductos ? (
-                        <span className="text-muted-foreground">Cargando productos...</span>
-                      ) : (
-                        <SelectValue placeholder={!selectedServicioId ? "Selecciona un servicio primero" : "Selecciona producto"} />
-                      )}
-                    </SelectTrigger>
-                    <SelectContent>
-                      {productos.length === 0 ? (
-                        <SelectItem value="0" disabled>
-                          {!selectedServicioId 
-                            ? "Selecciona un servicio primero" 
-                            : loadingProductos 
-                              ? "Cargando productos..." 
-                              : "No hay productos disponibles"}
-                        </SelectItem>
-                      ) : (
-                        productos.map((prod) => (
-                          <SelectItem key={prod.id} value={prod.id.toString()}>
-                            {prod.nombre} {prod.precio && `- $${prod.precio}`}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {producto.productoId > 0 && (
+          {productosUsados.map((producto, index) => (
+            <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 border rounded-lg">
+              <div className="space-y-1">
+                <Label>Producto</Label>
+                <Popover 
+                  open={index === openProductoCombobox} 
+                  onOpenChange={(open) => {
+                    setOpenProductoCombobox(open ? index : -1);
+                    if (!open) setSearchProducto("");
+                  }}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={index === openProductoCombobox}
+                      className="w-full justify-between h-9"
+                      disabled={!selectedServicioId || loadingProductos}
+                    >
+                      <span className="truncate">
+                        {producto.productoId > 0 && productos.find(p => p.id === producto.productoId)
+                          ? `${productos.find(p => p.id === producto.productoId)?.nombre} ${productos.find(p => p.id === producto.productoId)?.precio ? `- S/${Number(productos.find(p => p.id === producto.productoId)?.precio).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : ''}`
+                          : loadingProductos
+                          ? "Cargando productos..."
+                          : !selectedServicioId
+                          ? "Selecciona un servicio primero"
+                          : "Selecciona producto"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Buscar producto por nombre..." 
+                        value={searchProducto}
+                        onValueChange={setSearchProducto}
+                        className="h-9"
+                      />
+                      <CommandList className="max-h-[300px] overflow-auto">
+                        <CommandEmpty>No se encontraron productos</CommandEmpty>
+                        <CommandGroup>
+                          {productos.length === 0 ? (
+                            <CommandItem disabled>
+                              {!selectedServicioId
+                                ? "Selecciona un servicio primero"
+                                : loadingProductos
+                                  ? "Cargando productos..."
+                                  : "No hay productos disponibles"}
+                            </CommandItem>
+                          ) : (
+                            productos
+                              .filter(prod => 
+                                // Filtrar por nombre y por stock disponible
+                                (searchProducto === '' || 
+                                prod.nombre.toLowerCase().includes(searchProducto.toLowerCase())) &&
+                                prod.stock > 0
+                              )
+                              .map((prod) => (
+                                <CommandItem
+                                  key={prod.id}
+                                  value={prod.nombre}
+                                  onSelect={() => {
+                                    actualizarProducto(index, "productoId", prod.id);
+                                    setOpenProductoCombobox(-1);
+                                  }}
+                                  className="flex items-center justify-between px-3 py-2"
+                                >
+                                  <div className="flex items-center">
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4 flex-shrink-0",
+                                        producto.productoId === prod.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{prod.nombre}</span>
+                                      <span className={cn(
+                                        "text-xs",
+                                        prod.stock <= 5 ? "text-amber-500 font-medium" : "text-muted-foreground"
+                                      )}>
+                                        Stock disponible: {prod.stock} {prod.stock <= 5 && "(¡Bajo!)"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {prod.precio !== undefined && (
+                                    <span className="ml-4 whitespace-nowrap text-sm font-medium">
+                                      S/{Number(prod.precio).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                    </span>
+                                  )}
+                                </CommandItem>
+                              ))
+                          )}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {producto.productoId > 0 && (
+                  <div className="flex flex-col gap-1">
                     <div className="text-xs text-muted-foreground">
-                      Precio: ${producto.precioEnUso.toFixed(2)}
+                      Precio: <span className="font-medium">S/{Number(producto.precioEnUso).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                     </div>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <Label>Cantidad</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={producto.cantidadUsada}
-                    onChange={(e) => actualizarProducto(index, "cantidadUsada", Number.parseInt(e.target.value))}
-                    className="h-9"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label>Subtotal</Label>
-                  <Input
-                    type="text"
-                    value={`$${producto.subtotal.toFixed(2)}`}
-                    readOnly
-                    className="bg-muted cursor-not-allowed h-9"
-                  />
-                </div>
-
-                <div className="flex items-end justify-center">
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => eliminarProducto(index)}
-                    className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                    {productos.find(p => p.id === producto.productoId)?.stock && (
+                      <div className={cn(
+                        "text-xs",
+                        (productos.find(p => p.id === producto.productoId)?.stock || 0) <= 5 
+                          ? "text-amber-500 font-medium" 
+                          : "text-muted-foreground"
+                      )}>
+                        Stock disponible: {productos.find(p => p.id === producto.productoId)?.stock}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Guardando..." : mantenimiento ? "Actualizar" : "Crear"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+              <div className="space-y-1">
+                <Label>Cantidad</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max={producto.productoId > 0 ? productos.find(p => p.id === producto.productoId)?.stock || 1 : 1}
+                  value={producto.cantidadUsada}
+                  onChange={(e) => {
+                    const newValue = Number.parseInt(e.target.value);
+                    const maxStock = producto.productoId > 0 ? productos.find(p => p.id === producto.productoId)?.stock || 1 : 1;
+                    // Limitar la cantidad al stock disponible
+                    const limitedValue = Math.min(newValue, maxStock);
+                    actualizarProducto(index, "cantidadUsada", limitedValue);
+                  }}
+                  className="h-9"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>Subtotal</Label>
+                <Input
+                  type="text"
+                  value={`S/${Number(producto.subtotal).toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+                  readOnly
+                  className="bg-muted cursor-not-allowed h-9"
+                />
+              </div>
+
+              <div className="flex items-end justify-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => eliminarProducto(index)}
+                  className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Guardando..." : mantenimiento ? "Actualizar" : "Crear"}
+          </Button>
+        </div>
+      </form>
+    </DialogContent>
+    </Dialog >
   )
 }

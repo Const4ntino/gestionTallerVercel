@@ -143,6 +143,20 @@ export const serviciosMantenimientoApi = {
     if (!response.ok) throw new Error("Error al obtener servicios")
     return response.json()
   },
+
+  getByTaller: async (tallerId: number): Promise<ServicioResponse[]> => {
+    const searchParams = new URLSearchParams()
+    searchParams.append("tallerId", tallerId.toString())
+    searchParams.append("size", "1000") // Aseguramos obtener todos los servicios del taller
+
+    const response = await fetch(`${API_BASE_URL}/api/servicios/filtrar?${searchParams}`, {
+      headers: getAuthHeaders(),
+    })
+    if (!response.ok) throw new Error("Error al obtener servicios del taller")
+    
+    const data = await response.json()
+    return data.content || []
+  },
 }
 
 export const trabajadoresMantenimientoApi = {
