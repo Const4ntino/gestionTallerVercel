@@ -167,7 +167,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     try {
       setIsLoading(true)
       const [vehiculosData, trabajadoresData] = await Promise.all([
-        vehiculosApi.filter("", "ACTIVO"),
+        vehiculosApi.filter("", "ACTIVO", true), // Excluir vehículos en mantenimientos activos
         trabajadoresMantenimientoApi.getAll(),
       ])
 
@@ -271,7 +271,8 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
         return
       }
       
-      const response = await vehiculosApi.filter(search, "ACTIVO")
+      // Filtramos vehículos activos y que no estén en mantenimientos con estados SOLICITADO, EN_PROCESO o PENDIENTE
+      const response = await vehiculosApi.filter(search, "ACTIVO", true)
       setVehiculos(response.content || [])
     } catch (error) {
       console.error("Error al buscar vehículos:", error)

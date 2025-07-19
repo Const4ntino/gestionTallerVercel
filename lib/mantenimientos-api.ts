@@ -121,11 +121,19 @@ export const vehiculosApi = {
     return response.json()
   },
 
-  filter: async (search?: string, estado?: string): Promise<PageResponse<VehiculoResponse>> => {
+  filter: async (search?: string, estado?: string, excluirVehiculosEnMantenimiento?: boolean): Promise<PageResponse<VehiculoResponse>> => {
     const searchParams = new URLSearchParams()
     if (search) searchParams.append("search", search)
     if (estado) searchParams.append("estado", estado)
+    if (excluirVehiculosEnMantenimiento !== undefined) searchParams.append("excluirVehiculosEnMantenimiento", excluirVehiculosEnMantenimiento.toString())
     searchParams.append("size", "50") // Aumentamos el tamaño para mejor búsqueda
+    
+    console.log("Parámetros de búsqueda:", {
+      search,
+      estado,
+      excluirVehiculosEnMantenimiento,
+      url: `${API_BASE_URL}/api/vehiculos/filtrar?${searchParams.toString()}`
+    })
 
     const response = await fetch(`${API_BASE_URL}/api/vehiculos/filtrar?${searchParams}`, {
       headers: getAuthHeaders(),
