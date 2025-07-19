@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Edit, Trash2, DollarSign, Clock, Eye } from "lucide-react"
 import { serviciosApi } from "@/lib/servicios-api"
 import { talleresApi } from "@/lib/admin-api"
-import type { ServicioResponse, PageResponse, TallerResponse } from "@/types/servicios"
+import type { ServicioResponse, PageResponse, TallerResponse, ServicioFilterParams } from "@/types/servicios"
 import { toast } from "sonner"
 import { ServicioFormModal } from "@/components/admin/forms/servicio-form-modal"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
@@ -16,11 +16,12 @@ import { DetailsModal } from "@/components/admin/details-modal"
 
 interface FilterParams {
   search?: string
-  tallerId?: string
-  minPrecioBase?: string
-  maxPrecioBase?: string
-  minDuracionEstimadaHoras?: string
-  maxDuracionEstimadaHoras?: string
+  tallerId?: number
+  minPrecioBase?: number
+  maxPrecioBase?: number
+  minDuracionEstimadaHoras?: number
+  maxDuracionEstimadaHoras?: number
+  estado?: string
 }
 
 export default function ServiciosPage() {
@@ -63,7 +64,7 @@ export default function ServiciosPage() {
 
   const additionalData = {
     tallerId: talleres.map((taller) => ({
-      value: taller.id.toString(),
+      value: taller.id,
       label: `${taller.nombre} - ${taller.ciudad}`,
     })),
   }
@@ -76,7 +77,7 @@ export default function ServiciosPage() {
         size,
         sort: "nombre,asc",
         ...filters,
-      })
+      } as ServicioFilterParams)
       setPagination(response)
       setServicios(response.content)
     } catch (error) {
@@ -120,6 +121,17 @@ export default function ServiciosPage() {
     return "destructive"
   }
 
+  const getEstadoBadgeVariant = (estado: string) => {
+    switch (estado) {
+      case "ACTIVO":
+        return "default"
+      case "SUSPENDIDO":
+        return "destructive"
+      default:
+        return "outline"
+    }
+  }
+
   const columns = [
     {
       key: "id",
@@ -147,8 +159,7 @@ export default function ServiciosPage() {
       header: "Precio Base",
       render: (servicio: ServicioResponse) => (
         <div className="flex items-center gap-1">
-          <DollarSign className="h-3 w-3" />
-          <span className="font-medium">{servicio.precioBase.toFixed(2)}</span>
+          <span className="font-medium">S/{servicio.precioBase.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
       ),
     },
@@ -163,6 +174,11 @@ export default function ServiciosPage() {
           </Badge>
         </div>
       ),
+    },
+    {
+      key: "estado",
+      header: "Estado",
+      render: (servicio: ServicioResponse) => <Badge variant={getEstadoBadgeVariant(servicio.estado)}>{servicio.estado}</Badge>,
     },
     {
       key: "fechaCreacion",
@@ -194,10 +210,20 @@ export default function ServiciosPage() {
     </div>
   )
 
-  const handleApplyFilters = (filters: FilterParams) => {
-    setCurrentFilters(filters)
+  const handleApplyFilters = (filters: any) => {
+    // Convertir los valores de string a número donde sea necesario
+    const processedFilters: FilterParams = {
+      ...filters,
+      tallerId: filters.tallerId ? Number(filters.tallerId) : undefined,
+      minPrecioBase: filters.minPrecioBase ? Number(filters.minPrecioBase) : undefined,
+      maxPrecioBase: filters.maxPrecioBase ? Number(filters.maxPrecioBase) : undefined,
+      minDuracionEstimadaHoras: filters.minDuracionEstimadaHoras ? Number(filters.minDuracionEstimadaHoras) : undefined,
+      maxDuracionEstimadaHoras: filters.maxDuracionEstimadaHoras ? Number(filters.maxDuracionEstimadaHoras) : undefined,
+    }
+    
+    setCurrentFilters(processedFilters)
     setCurrentPage(0)
-    loadServicios(0, pageSize, filters)
+    loadServicios(0, pageSize, processedFilters)
   }
 
   const handleClearFilters = () => {
@@ -280,7 +306,8 @@ export default function ServiciosPage() {
                 { label: "Taller", value: selectedServicioDetails.taller.nombre },
                 { label: "Ciudad del Taller", value: selectedServicioDetails.taller.ciudad },
                 { label: "Descripción Completa", value: selectedServicioDetails.descripcion },
-                { label: "Precio Base", value: selectedServicioDetails.precioBase, type: "currency" },
+                { label: "Precio Base", value: `S/${selectedServicioDetails.precioBase.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
+                { label: "Estado", value: selectedServicioDetails.estado },
                 { label: "Duración Estimada", value: `${selectedServicioDetails.duracionEstimadaHoras} horas` },
                 { label: "Fecha de Creación", value: selectedServicioDetails.fechaCreacion, type: "date" },
                 { label: "Última Actualización", value: selectedServicioDetails.fechaActualizacion, type: "date" },

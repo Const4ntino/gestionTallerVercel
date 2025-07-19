@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
-import { Plus, Trash2, Check, ChevronsUpDown } from "lucide-react"
+import { Plus, Trash2, Check, ChevronsUpDown, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import {
@@ -945,6 +945,28 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
+              {!mantenimiento && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    reset({
+                      estado: "SOLICITADO",
+                      productosUsados: []
+                    });
+                    setProductosUsados([]);
+                    setSelectedVehiculo(null);
+                    setVehiculoSearch("");
+                    setSearchServicio("");
+                    setSearchProducto("");
+                    toast.info("Formulario limpiado");
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Limpiar
+                </Button>
+              )}
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? "Guardando..." : mantenimiento ? "Actualizar" : "Crear"}
               </Button>

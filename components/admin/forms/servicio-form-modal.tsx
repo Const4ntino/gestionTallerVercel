@@ -38,6 +38,7 @@ export function ServicioFormModal({ open, onOpenChange, servicio, onSuccess }: S
     descripcion: "",
     precioBase: "",
     duracionEstimadaHoras: "",
+    estado: "ACTIVO", // Valor predeterminado para nuevos servicios
   })
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export function ServicioFormModal({ open, onOpenChange, servicio, onSuccess }: S
           descripcion: servicio.descripcion || "",
           precioBase: servicio.precioBase?.toString() || "",
           duracionEstimadaHoras: servicio.duracionEstimadaHoras?.toString() || "",
+          estado: servicio.estado || "ACTIVO",
         })
       } else {
         setFormData({
@@ -58,6 +60,7 @@ export function ServicioFormModal({ open, onOpenChange, servicio, onSuccess }: S
           descripcion: "",
           precioBase: "",
           duracionEstimadaHoras: "",
+          estado: "ACTIVO", // Valor predeterminado para nuevos servicios
         })
       }
     }
@@ -84,6 +87,7 @@ export function ServicioFormModal({ open, onOpenChange, servicio, onSuccess }: S
         descripcion: formData.descripcion,
         precioBase: Number.parseFloat(formData.precioBase),
         duracionEstimadaHoras: Number.parseFloat(formData.duracionEstimadaHoras),
+        estado: formData.estado,
       }
 
       if (servicio) {
@@ -162,7 +166,7 @@ export function ServicioFormModal({ open, onOpenChange, servicio, onSuccess }: S
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="precioBase">Precio Base ($)</Label>
+              <Label htmlFor="precioBase">Precio Base (S/)</Label>
               <Input
                 id="precioBase"
                 value={formData.precioBase}
@@ -188,6 +192,19 @@ export function ServicioFormModal({ open, onOpenChange, servicio, onSuccess }: S
                 required
               />
             </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="estado">Estado</Label>
+            <Select value={formData.estado} onValueChange={(value) => handleChange("estado", value)} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVO">ACTIVO</SelectItem>
+                <SelectItem value="SUSPENDIDO">SUSPENDIDO</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter>

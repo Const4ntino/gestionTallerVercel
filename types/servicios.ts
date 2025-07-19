@@ -16,6 +16,7 @@ export interface ServicioResponse {
   descripcion: string
   precioBase: number
   duracionEstimadaHoras: number
+  estado: string
   fechaCreacion: string
   fechaActualizacion: string
 }
@@ -26,6 +27,7 @@ export interface ServicioRequest {
   descripcion: string
   precioBase: number
   duracionEstimadaHoras: number
+  estado: string
 }
 
 export interface ServicioFilterParams {
@@ -35,6 +37,7 @@ export interface ServicioFilterParams {
   maxPrecioBase?: number
   minDuracionEstimadaHoras?: number
   maxDuracionEstimadaHoras?: number
+  estado?: string
   page?: number
   size?: number
   sort?: string

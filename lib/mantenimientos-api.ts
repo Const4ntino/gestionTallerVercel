@@ -147,6 +147,7 @@ export const serviciosMantenimientoApi = {
   getByTaller: async (tallerId: number): Promise<ServicioResponse[]> => {
     const searchParams = new URLSearchParams()
     searchParams.append("tallerId", tallerId.toString())
+    searchParams.append("estado", "ACTIVO") // Solo servicios activos
     searchParams.append("size", "1000") // Aseguramos obtener todos los servicios del taller
 
     const response = await fetch(`${API_BASE_URL}/api/servicios/filtrar?${searchParams}`, {
