@@ -58,6 +58,7 @@ interface MantenimientoFormModalProps {
 export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSuccess }: MantenimientoFormModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
+  const [selectedVehiculo, setSelectedVehiculo] = useState<VehiculoResponse | null>(null)
   const [talleres, setTalleres] = useState<TallerResponse[]>([])
   const [servicios, setServicios] = useState<any[]>([])
   const [trabajadores, setTrabajadores] = useState<any[]>([])
@@ -113,9 +114,11 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
   // Cargar productos cuando cambia el servicio seleccionado
   useEffect(() => {
-    if (selectedServicioId) {
+    if (selectedServicioId && servicios.length > 0) {
       const servicio = servicios.find((s) => s.id === selectedServicioId)
       if (servicio?.taller?.id) {
+        // Asegurarnos de cargar los productos del taller correcto
+        console.log(`Cargando productos para taller ID: ${servicio.taller.id} del servicio seleccionado`)
         loadProductosByTaller(servicio.taller.id)
       }
     } else {
@@ -128,10 +131,13 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
         setValue("productosUsados", [])
       }
     }
-  }, [selectedServicioId, servicios])
+  }, [selectedServicioId, servicios, productosUsados.length])
 
   useEffect(() => {
     if (mantenimiento) {
+      // Guardar el vehículo seleccionado para mostrarlo en el combobox
+      setSelectedVehiculo(mantenimiento.vehiculo)
+      
       setValue("vehiculoId", mantenimiento.vehiculo.id)
       setValue("tallerId", mantenimiento.servicio.taller.id)
       setValue("servicioId", mantenimiento.servicio.id)
@@ -247,10 +253,12 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     try {
       setLoadingProductos(true)
       const productosData = await productosMantenimientoApi.filterByTaller(tallerId)
+      console.log(`Productos cargados para taller ID ${tallerId}:`, productosData.length)
+      // Asegurarnos de que el estado se actualice correctamente
       setProductos(productosData)
     } catch (error) {
       toast.error("Error al cargar productos del taller")
-      console.error(error)
+      console.error("Error al cargar productos:", error)
     } finally {
       setLoadingProductos(false)
     }
@@ -258,6 +266,11 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
   const searchVehiculos = async (search: string) => {
     try {
+      // Si estamos en modo edición y ya tenemos un vehículo seleccionado, no hacemos nada
+      if (mantenimiento) {
+        return
+      }
+      
       const response = await vehiculosApi.filter(search, "ACTIVO")
       setVehiculos(response.content || [])
     } catch (error) {
@@ -346,7 +359,16 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     }
   }
 
-  const selectedVehiculo = vehiculos.find((v) => v.id === selectedVehiculoId)
+  // Actualizar selectedVehiculo si no está en modo edición y cambia el ID seleccionado
+  useEffect(() => {
+    if (!mantenimiento && selectedVehiculoId) {
+      const vehiculo = vehiculos.find((v) => v.id === selectedVehiculoId)
+      if (vehiculo) {
+        setSelectedVehiculo(vehiculo)
+      }
+    }
+  }, [selectedVehiculoId, vehiculos, mantenimiento])
+  
   const selectedTaller = talleres.find((t) => t.id === selectedTallerId)
   const selectedServicio = servicios.find((s) => s.id === selectedServicioId)
 
@@ -375,8 +397,10 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                     value={watch("tallerId")?.toString() || "0"}
                     onValueChange={(value) => {
                       const tallerId = Number.parseInt(value)
+                      console.log(`Cambiando taller a ID: ${tallerId}`)
                       setValue("tallerId", tallerId)
                       setValue("servicioId", 0)
+                      // Limpiar productos y productos usados al cambiar de taller
                       setProductos([])
                       setProductosUsados([])
                       setValue("productosUsados", [])
@@ -447,12 +471,19 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                                   key={servicio.id}
                                   value={servicio.nombre}
                                   onSelect={() => {
+                                    console.log(`Seleccionando servicio ID: ${servicio.id}, taller ID: ${servicio.taller?.id}`)
                                     setValue("servicioId", servicio.id)
                                     setOpenServicioCombobox(false)
-                                    setProductos([])
+                                    // Al seleccionar un servicio, los productos se cargarán en el useEffect
+                                    // que observa selectedServicioId
                                     setProductosUsados([])
                                     setValue("productosUsados", [])
                                     setSearchServicio("")
+                                    
+                                    // Forzar la carga de productos inmediatamente si tenemos el taller del servicio
+                                    if (servicio.taller?.id) {
+                                      loadProductosByTaller(servicio.taller.id)
+                                    }
                                   }}
                                   className="flex items-center justify-between px-3 py-2"
                                 >
@@ -483,19 +514,26 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
               {/* Vehículo */}
               <div className="space-y-2">
-                <Label htmlFor="vehiculoId">Vehículo</Label>
-                <Popover open={openVehiculoCombobox} onOpenChange={setOpenVehiculoCombobox}>
+                <Label htmlFor="vehiculoId">Vehículo {mantenimiento && <span className="text-xs text-muted-foreground ml-1">(No editable)</span>}</Label>
+                <Popover 
+                  open={mantenimiento ? false : openVehiculoCombobox} 
+                  onOpenChange={mantenimiento ? () => {} : setOpenVehiculoCombobox}
+                >
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
                       aria-expanded={openVehiculoCombobox}
-                      className="w-full justify-between bg-transparent"
+                      className={cn(
+                        "w-full justify-between",
+                        mantenimiento ? "bg-muted cursor-not-allowed" : "bg-transparent"
+                      )}
+                      disabled={!!mantenimiento}
                     >
                       {selectedVehiculo
                         ? `${selectedVehiculo.placa} - ${selectedVehiculo.marca} ${selectedVehiculo.modelo}`
                         : "Selecciona un vehículo..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      {!mantenimiento && <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-full p-0">
@@ -517,6 +555,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                               value={`${vehiculo.placa} ${vehiculo.marca} ${vehiculo.modelo}`}
                               onSelect={() => {
                                 setValue("vehiculoId", vehiculo.id)
+                                setSelectedVehiculo(vehiculo)
                                 setOpenVehiculoCombobox(false)
                               }}
                             >
