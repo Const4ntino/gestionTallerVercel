@@ -16,6 +16,7 @@ import {
   FileText,
   Package,
   Settings,
+  Building,
   LogOut,
 } from "lucide-react"
 
@@ -24,6 +25,11 @@ const menuItems = [
     title: "Dashboard",
     href: "/admin",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Mi Empresa",
+    href: "/admin/empresa",
+    icon: Building,
   },
   {
     title: "Usuarios",
