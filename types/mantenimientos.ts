@@ -7,6 +7,8 @@ export interface VehiculoResponse {
     id: number
     usuario: {
       nombreCompleto: string
+      dni?: string
+      correo: string
     }
   }
 }
@@ -14,6 +16,7 @@ export interface VehiculoResponse {
 export interface ServicioResponse {
   id: number
   nombre: string
+  precioBase?: number
   taller: {
     id: number
     nombre: string
@@ -60,6 +63,7 @@ export interface MantenimientoResponse {
   fechaCreacion: string
   fechaActualizacion: string
   productosUsados: MantenimientoProductoResponse[]
+  estaFacturado?: boolean
 }
 
 export interface MantenimientoRequest {
@@ -86,6 +90,7 @@ export interface MantenimientoFilterParams {
   fechaInicioHasta?: string
   fechaFinDesde?: string
   fechaFinHasta?: string
+  estaFacturado?: boolean
   page?: number
   size?: number
   sort?: string

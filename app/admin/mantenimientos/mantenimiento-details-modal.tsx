@@ -27,7 +27,7 @@ interface DetailsModalProps {
   totalAmount?: number
 }
 
-export function DetailsModal({ 
+export function MantenimientoDetailsModal({ 
   open, 
   onOpenChange, 
   title, 

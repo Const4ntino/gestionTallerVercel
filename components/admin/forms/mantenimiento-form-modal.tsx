@@ -66,6 +66,7 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const [productosUsados, setProductosUsados] = useState<
     Array<{ productoId: number; cantidadUsada: number; precioEnUso: number; subtotal: number }>
   >([])
+  const [cantidadesOriginales, setCantidadesOriginales] = useState<Record<number, number>>({})
   const [vehiculoSearch, setVehiculoSearch] = useState("")
   const [openVehiculoCombobox, setOpenVehiculoCombobox] = useState(false)
   const [loadingProductos, setLoadingProductos] = useState(false)
@@ -152,6 +153,14 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
         precioEnUso: p.precioEnUso,
         subtotal: p.precioEnUso * p.cantidadUsada,
       }))
+      
+      // Guardar las cantidades originales para cada producto
+      const cantidadesInicial: Record<number, number> = {}
+      mantenimiento.productosUsados.forEach((p) => {
+        cantidadesInicial[p.producto.id] = p.cantidadUsada
+      })
+      setCantidadesOriginales(cantidadesInicial)
+      
       setProductosUsados(productosFormateados)
       setValue("productosUsados", productosFormateados)
     } else {
@@ -568,7 +577,12 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
               {/* Vehículo */}
               <div className="space-y-2">
-                <Label htmlFor="vehiculoId">Vehículo {mantenimiento && <span className="text-xs text-muted-foreground ml-1">(No editable)</span>}</Label>
+                <Label htmlFor="vehiculoId">
+                  Vehículo
+                  {mantenimiento && (
+                    <span className="text-sm text-muted-foreground ml-2">(No editable)</span>
+                  )}
+                </Label>
                 <Popover 
                   open={mantenimiento ? false : openVehiculoCombobox} 
                   onOpenChange={mantenimiento ? () => {} : setOpenVehiculoCombobox}
@@ -660,10 +674,16 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="estado">Estado</Label>
+                  <Label htmlFor="estado">
+                    Estado
+                    {mantenimiento?.estado === "COMPLETADO" && (
+                      <span className="text-sm text-muted-foreground ml-2">(No editable)</span>
+                    )}
+                  </Label>
                   <Select
-                    value={watch("estado")}
+                    value={watch("estado") || mantenimiento?.estado || ""}
                     onValueChange={(value) => setValue("estado", value as MantenimientoEstado)}
+                    disabled={mantenimiento?.estado === "COMPLETADO"}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona un estado" />
@@ -834,7 +854,24 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                     <div className="divide-y">
                       {productosUsados.map((producto, index) => {
                         const productoInfo = productos.find((p) => p.id === producto.productoId)
-                        const maxStock = productoInfo?.stock || 1
+                        // En modo edición, permitir hasta la cantidad original + stock disponible
+                        // Esto permite mantener la cantidad original o aumentarla si hay stock disponible
+                        const isEditMode = !!mantenimiento
+                        
+                        // Asegurar que los valores son números válidos
+                        const currentStock = productoInfo?.stock || 0
+                        
+                        // En modo edición, usar la cantidad original guardada al cargar el mantenimiento
+                        // Esto evita que el límite máximo cambie cuando se modifica la cantidad en el spinner
+                        const originalAmount = isEditMode && productoInfo ? (cantidadesOriginales[productoInfo.id] || 0) : 0
+                        
+                        // Calcular el máximo permitido
+                        const maxStock = isEditMode
+                          ? currentStock + originalAmount
+                          : currentStock || 1
+                          
+                        // Verificación de seguridad para evitar valores infinitos o incorrectos
+                        const safeMaxStock = isFinite(maxStock) && maxStock > 0 ? maxStock : 1
                         
                         return (
                           <div key={index} className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-gray-50">
@@ -845,9 +882,13 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                                   <div className="font-medium">{productoInfo.nombre}</div>
                                   <div className={cn(
                                     "text-xs",
-                                    maxStock <= 5 ? "text-amber-500" : "text-muted-foreground"
+                                    productoInfo.stock <= 5 ? "text-amber-500" : "text-muted-foreground"
                                   )}>
-                                    Stock: {maxStock} {maxStock <= 5 && "(¡Bajo!)"}
+                                    {isEditMode ? (
+                                      <>Stock disponible: {currentStock} + {originalAmount} (original) = {safeMaxStock} {currentStock <= 5 && "(¡Bajo!)"}</>
+                                    ) : (
+                                      <>Stock: {safeMaxStock} {safeMaxStock <= 5 && "(¡Bajo!)"}</>
+                                    )}
                                   </div>
                                 </div>
                               ) : (
@@ -860,12 +901,21 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                               <Input
                                 type="number"
                                 min="1"
-                                max={maxStock}
+                                max={safeMaxStock}
                                 value={producto.cantidadUsada}
                                 onChange={(e) => {
-                                  const newValue = Number.parseInt(e.target.value) || 1
-                                  const limitedValue = Math.min(Math.max(1, newValue), maxStock)
-                                  actualizarProducto(index, "cantidadUsada", limitedValue)
+                                  // Asegurar que el valor esté dentro de los límites permitidos
+                                  let newValue = Number.parseInt(e.target.value) || 1
+                                  
+                                  // Aplicar límite estricto
+                                  if (newValue > safeMaxStock) {
+                                    newValue = safeMaxStock
+                                  } else if (newValue < 1) {
+                                    newValue = 1
+                                  }
+                                  
+                                  // Solo actualizar si el valor es válido
+                                  actualizarProducto(index, "cantidadUsada", newValue)
                                 }}
                                 className="h-8 text-center"
                               />

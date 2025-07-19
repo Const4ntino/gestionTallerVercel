@@ -1,15 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, Filter, X } from "lucide-react"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { Filter, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { FilterParams } from "@/types/admin"
 
@@ -31,6 +28,12 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
   const [isOpen, setIsOpen] = useState(false)
   const [filterValues, setFilterValues] = useState<Record<string, any>>({})
   const [activeFiltersCount, setActiveFiltersCount] = useState(0)
+  const [isMounted, setIsMounted] = useState(false)
+  
+  // Evitar problemas de hidratación entre servidor y cliente
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const handleFilterChange = (key: string, value: any) => {
     setFilterValues((prev) => ({
@@ -78,14 +81,18 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
       case "select":
         const options = filter.options || additionalData?.[filter.key] || []
         return (
-          <Select value={value} onValueChange={(val) => handleFilterChange(filter.key, val)}>
+          <Select value={value || "all"} onValueChange={(val) => handleFilterChange(filter.key, val)}>
             <SelectTrigger>
               <SelectValue placeholder={`Seleccionar ${filter.label.toLowerCase()}`} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               {options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                // Asegurarse de que el valor nunca sea una cadena vacía
+                <SelectItem 
+                  key={option.value} 
+                  value={option.value || `option-${option.label}`}
+                >
                   {option.label}
                 </SelectItem>
               ))}
@@ -95,25 +102,21 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
 
       case "date":
         return (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn("w-full justify-start text-left font-normal", !value && "text-muted-foreground")}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), "PPP", { locale: es }) : `Seleccionar ${filter.label.toLowerCase()}`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => handleFilterChange(filter.key, date?.toISOString())}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <Input
+            type="date"
+            value={value ? value.substring(0, 10) : ""}
+            onChange={(e) => {
+              const selectedDate = e.target.value;
+              if (selectedDate) {
+                // Convertir a formato ISO para mantener consistencia
+                const date = new Date(selectedDate);
+                handleFilterChange(filter.key, date.toISOString());
+              } else {
+                handleFilterChange(filter.key, "");
+              }
+            }}
+            className="w-full"
+          />
         )
 
       default:
@@ -121,6 +124,22 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
     }
   }
 
+  // Si no estamos montados en el cliente, mostramos solo el botón sin funcionalidad
+  if (!isMounted) {
+    return (
+      <Button variant="outline" className="relative bg-transparent">
+        <Filter className="mr-2 h-4 w-4" />
+        Filtros Avanzados
+        {activeFiltersCount > 0 && (
+          <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center">
+            {activeFiltersCount}
+          </span>
+        )}
+      </Button>
+    );
+  }
+  
+  // Renderizado completo cuando estamos en el cliente
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -134,7 +153,7 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-4" align="start">
+      <PopoverContent className="w-96 p-4 max-h-[80vh] overflow-y-auto" align="start">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">Filtros Avanzados</h4>

@@ -5,6 +5,12 @@ import { AdminLayout } from "@/components/admin/admin-layout"
 import { DataTable } from "@/components/admin/data-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Edit, Trash2, LayoutDashboard, List } from "lucide-react"
 import {
@@ -18,7 +24,7 @@ import { toast } from "sonner"
 import { MantenimientoFormModal } from "@/components/admin/forms/mantenimiento-form-modal"
 import { MantenimientosDashboard } from "@/components/admin/mantenimientos/mantenimientos-dashboard"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
-import { DetailsModal } from "@/components/admin/details-modal"
+import { MantenimientoDetailsModal } from "./mantenimiento-details-modal"
 
 interface FilterParams {
   search?: string
@@ -237,6 +243,21 @@ export default function MantenimientosPage() {
       ),
     },
     {
+      key: "cliente",
+      header: "Cliente",
+      render: (mantenimiento: MantenimientoResponse) => (
+        <div className="min-w-[150px]">
+          <div className="font-medium">{mantenimiento.vehiculo.cliente.usuario.nombreCompleto}</div>
+          <div className="text-xs text-muted-foreground">
+            {mantenimiento.vehiculo.cliente.usuario.dni || "DNI no registrado"}
+          </div>
+          <div className="text-xs text-muted-foreground truncate max-w-[150px]" title={mantenimiento.vehiculo.cliente.usuario.correo}>
+            {mantenimiento.vehiculo.cliente.usuario.correo}
+          </div>
+        </div>
+      ),
+    },
+    {
       key: "servicio.nombre",
       header: "Servicio",
       render: (mantenimiento: MantenimientoResponse) => (
@@ -253,31 +274,91 @@ export default function MantenimientosPage() {
       ),
     },
     {
-      key: "fechaCreacion",
-      header: "Fecha Creación",
+      key: "estaFacturado",
+      header: "Facturado",
       render: (mantenimiento: MantenimientoResponse) => (
-        <div className="min-w-[140px] text-sm">{formatDateTime(mantenimiento.fechaCreacion)}</div>
+        <Badge variant={mantenimiento.estaFacturado ? "default" : "outline"}>
+          {mantenimiento.estaFacturado ? "Sí" : "No"}
+        </Badge>
+      ),
+    },
+    {
+      key: "fechas",
+      header: "Fechas",
+      render: (mantenimiento: MantenimientoResponse) => (
+        <div className="min-w-[180px] text-sm space-y-1">
+          <div>
+            <div className="text-xs font-medium text-muted-foreground">Fecha Creación</div>
+            <div>{formatDateTime(mantenimiento.fechaCreacion)}</div>
+          </div>
+          <div>
+            <div className="text-xs font-medium text-muted-foreground">Fecha Inicio</div>
+            {mantenimiento.fechaInicio ? (
+              <div>{formatDateTime(mantenimiento.fechaInicio)}</div>
+            ) : (
+              <div className="italic text-muted-foreground">No iniciado</div>
+            )}
+          </div>
+          <div>
+            <div className="text-xs font-medium text-muted-foreground">Fecha Fin</div>
+            {mantenimiento.fechaFin ? (
+              <div>{formatDateTime(mantenimiento.fechaFin)}</div>
+            ) : (
+              <div className="italic text-muted-foreground">No culminado</div>
+            )}
+          </div>
+        </div>
       ),
     },
   ]
 
-  const actions = (mantenimiento: MantenimientoResponse) => (
-    <div className="flex gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          setSelectedMantenimiento(mantenimiento)
-          setModalOpen(true)
-        }}
-      >
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => handleDelete(mantenimiento.id)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  )
+  const actions = (mantenimiento: MantenimientoResponse) => {
+    const isCanceled = mantenimiento.estado === "CANCELADO";
+    const isInvoiced = mantenimiento.estaFacturado;
+    const isEditDisabled = isInvoiced || isCanceled;
+    
+    return (
+      <div className="flex gap-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedMantenimiento(mantenimiento)
+                    setModalOpen(true)
+                  }}
+                  disabled={isEditDisabled}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {isInvoiced && (
+              <TooltipContent>
+                <p>Ya se encuentra facturado</p>
+              </TooltipContent>
+            )}
+            {isCanceled && !isInvoiced && (
+              <TooltipContent>
+                <p>El mantenimiento fue cancelado</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => handleDelete(mantenimiento.id)}
+          disabled={!isCanceled}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
 
   const handleApplyFilters = (filters: FilterParams) => {
     setCurrentFilters(filters)
@@ -338,6 +419,16 @@ export default function MantenimientosPage() {
                     { key: "servicioId", label: "Servicio", type: "select" as const },
                     { key: "trabajadorId", label: "Trabajador", type: "select" as const },
                     { key: "estado", label: "Estado", type: "select" as const },
+                    { 
+                      key: "estaFacturado", 
+                      label: "Facturado", 
+                      type: "select" as const,
+                      options: [
+                        { value: "", label: "Todos" },
+                        { value: "true", label: "Sí" },
+                        { value: "false", label: "No" }
+                      ]
+                    },
                   ]}
                   onApplyFilters={handleApplyFilters}
                   onClearFilters={handleClearFilters}
@@ -384,12 +475,15 @@ export default function MantenimientosPage() {
         }}
       />
 
-      <DetailsModal
+      <MantenimientoDetailsModal
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
         title="Detalles del Mantenimiento"
         description="Información completa del mantenimiento seleccionado"
-        fields={
+        twoColumns={true}
+        leftColumnTitle="Datos del Mantenimiento"
+        rightColumnTitle="Productos Utilizados"
+        leftColumnFields={
           selectedMantenimientoDetails
             ? [
                 { label: "ID", value: selectedMantenimientoDetails.id },
@@ -397,8 +491,16 @@ export default function MantenimientosPage() {
                   label: "Vehículo",
                   value: `${selectedMantenimientoDetails.vehiculo.placa} - ${selectedMantenimientoDetails.vehiculo.marca} ${selectedMantenimientoDetails.vehiculo.modelo}`,
                 },
-                { label: "Cliente", value: selectedMantenimientoDetails.vehiculo.cliente.usuario.nombreCompleto },
+                { 
+                  label: "Cliente", 
+                  value: `${selectedMantenimientoDetails.vehiculo.cliente.usuario.nombreCompleto}\nDNI: ${selectedMantenimientoDetails.vehiculo.cliente.usuario.dni || "No registrado"}\nEmail: ${selectedMantenimientoDetails.vehiculo.cliente.usuario.correo}`
+                },
                 { label: "Servicio", value: selectedMantenimientoDetails.servicio.nombre },
+                { 
+                  label: "Precio Servicio", 
+                  value: selectedMantenimientoDetails.servicio.precioBase || 0, 
+                  type: "currency" 
+                },
                 { label: "Taller", value: selectedMantenimientoDetails.servicio.taller.nombre },
                 {
                   label: "Trabajador",
@@ -413,6 +515,18 @@ export default function MantenimientosPage() {
                 },
                 { label: "Fecha de Inicio", value: selectedMantenimientoDetails.fechaInicio, type: "date" },
                 { label: "Fecha de Fin", value: selectedMantenimientoDetails.fechaFin, type: "date" },
+                { label: "Fecha de Creación", value: selectedMantenimientoDetails.fechaCreacion, type: "date" },
+                { label: "Última Actualización", value: selectedMantenimientoDetails.fechaActualizacion, type: "date" },
+              ]
+            : []
+        }
+        rightColumnFields={
+          selectedMantenimientoDetails
+            ? [
+                ...selectedMantenimientoDetails.productosUsados.map((producto, index) => ({
+                  label: `Producto ${index + 1}`,
+                  value: `${producto.producto.nombre}\nCantidad: ${producto.cantidadUsada} × Precio unitario: S/ ${producto.precioEnUso.toLocaleString('es-PE')}\nSubtotal: S/ ${(producto.cantidadUsada * producto.precioEnUso).toLocaleString('es-PE')}`,
+                })),
                 {
                   label: "Observaciones del Cliente",
                   value: selectedMantenimientoDetails.observacionesCliente || "Sin observaciones",
@@ -421,17 +535,18 @@ export default function MantenimientosPage() {
                   label: "Observaciones del Trabajador",
                   value: selectedMantenimientoDetails.observacionesTrabajador || "Sin observaciones",
                 },
-                {
-                  label: "Productos Usados",
-                  value:
-                    selectedMantenimientoDetails.productosUsados.length > 0
-                      ? `${selectedMantenimientoDetails.productosUsados.length} productos`
-                      : "Sin productos",
-                },
-                { label: "Fecha de Creación", value: selectedMantenimientoDetails.fechaCreacion, type: "date" },
-                { label: "Última Actualización", value: selectedMantenimientoDetails.fechaActualizacion, type: "date" },
               ]
             : []
+        }
+        showTotal={true}
+        totalAmount={
+          selectedMantenimientoDetails
+            ? (selectedMantenimientoDetails.servicio.precioBase || 0) +
+              selectedMantenimientoDetails.productosUsados.reduce(
+                (total, producto) => total + producto.cantidadUsada * producto.precioEnUso,
+                0
+              )
+            : 0
         }
       />
     </AdminLayout>

@@ -288,30 +288,51 @@ export function MantenimientosDashboard({ onRefresh }: MantenimientosDashboardPr
                       <Badge variant={getEstadoBadgeVariant(mantenimiento.estado)}>{mantenimiento.estado}</Badge>
                     </div>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2 text-sm">
-                        <Car className="h-3 w-3" />
-                        <span className="font-medium">{mantenimiento.vehiculo.placa}</span>
-                        <span className="text-muted-foreground">
-                          {mantenimiento.vehiculo.marca} {mantenimiento.vehiculo.modelo}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <Settings className="h-3 w-3" />
-                        <span>{mantenimiento.servicio.nombre}</span>
-                      </div>
-
-                      {mantenimiento.trabajador && (
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <User className="h-3 w-3" />
-                          <span>{mantenimiento.trabajador.usuario.nombreCompleto}</span>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Columna izquierda: Vehículo y Cliente */}
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Car className="h-3 w-3" />
+                          <span className="font-medium">{mantenimiento.vehiculo.placa}</span>
+                          <span className="text-muted-foreground">
+                            {mantenimiento.vehiculo.marca} {mantenimiento.vehiculo.modelo}
+                          </span>
                         </div>
-                      )}
+                        
+                        <div className="flex items-center space-x-2 text-sm">
+                          <User className="h-3 w-3" />
+                          <span className="font-medium">{mantenimiento.vehiculo.cliente.usuario.nombreCompleto}</span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <span className="ml-5">DNI: {mantenimiento.vehiculo.cliente.usuario.dni || "No registrado"}</span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <span className="ml-5 truncate max-w-[180px]" title={mantenimiento.vehiculo.cliente.usuario.correo}>
+                            {mantenimiento.vehiculo.cliente.usuario.correo}
+                          </span>
+                        </div>
+                      </div>
 
-                      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span>{formatDateTime(mantenimiento.fechaCreacion)}</span>
+                      {/* Columna derecha: Servicio, Trabajador y Fecha */}
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <Settings className="h-3 w-3" />
+                          <span>{mantenimiento.servicio.nombre}</span>
+                        </div>
+
+                        {mantenimiento.trabajador && (
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            <span>Técnico: {mantenimiento.trabajador.usuario.nombreCompleto}</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDateTime(mantenimiento.fechaCreacion)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
