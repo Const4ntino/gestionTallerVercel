@@ -278,13 +278,39 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
     }
   }
 
-  const agregarProducto = () => {
+  const agregarProducto = (productoId?: number) => {
     // Solo permitir agregar productos si hay un servicio seleccionado
     if (!selectedServicioId) {
       toast.error("Debes seleccionar un servicio antes de agregar productos")
       return
     }
-
+    
+    // Si se proporciona un productoId, verificar que no esté duplicado
+    if (productoId) {
+      // Verificar si el producto ya existe en la lista
+      const productoExistente = productosUsados.find(p => p.productoId === productoId)
+      if (productoExistente) {
+        toast.error("Este producto ya ha sido agregado")
+        return
+      }
+      
+      // Buscar el producto seleccionado para obtener su precio
+      const productoSeleccionado = productos.find(p => p.id === productoId)
+      if (productoSeleccionado) {
+        const nuevoProducto = { 
+          productoId, 
+          cantidadUsada: 1, 
+          precioEnUso: productoSeleccionado.precio || 0, 
+          subtotal: productoSeleccionado.precio || 0 
+        }
+        const nuevosProductos = [...productosUsados, nuevoProducto]
+        setProductosUsados(nuevosProductos)
+        setValue("productosUsados", nuevosProductos)
+        return
+      }
+    }
+    
+    // Si no se proporciona un productoId o no se encuentra el producto, agregar uno vacío
     const nuevosProductos = [...productosUsados, { productoId: 0, cantidadUsada: 1, precioEnUso: 0, subtotal: 0 }]
     setProductosUsados(nuevosProductos)
     setValue("productosUsados", nuevosProductos)
@@ -371,6 +397,29 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   
   const selectedTaller = talleres.find((t) => t.id === selectedTallerId)
   const selectedServicio = servicios.find((s) => s.id === selectedServicioId)
+  
+  // Calcular el total general (productos + servicio)
+  const totalProductos = productosUsados.reduce((total, p) => total + p.subtotal, 0)
+  
+  // Asegurarnos de obtener el precio del servicio seleccionado
+  const [precioServicio, setPrecioServicio] = useState<number>(0)
+  
+  // Actualizar el precio del servicio cuando cambia el servicio seleccionado o la lista de servicios
+  useEffect(() => {
+    if (selectedServicioId && servicios.length > 0) {
+      const servicio = servicios.find(s => s.id === selectedServicioId)
+      if (servicio) {
+        console.log(`Actualizando precio del servicio: ${servicio.nombre} - ${servicio.precioBase}`)
+        setPrecioServicio(servicio.precioBase || 0)
+      } else {
+        setPrecioServicio(0)
+      }
+    } else {
+      setPrecioServicio(0)
+    }
+  }, [selectedServicioId, servicios])
+  
+  const totalGeneral = totalProductos + precioServicio
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -479,6 +528,10 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
                                     setProductosUsados([])
                                     setValue("productosUsados", [])
                                     setSearchServicio("")
+                                    
+                                    // Actualizar el precio del servicio inmediatamente
+                                    console.log(`Actualizando precio del servicio directamente: ${servicio.nombre} - ${servicio.precioBase}`)
+                                    setPrecioServicio(servicio.precioBase || 0)
                                     
                                     // Forzar la carga de productos inmediatamente si tenemos el taller del servicio
                                     if (servicio.taller?.id) {
@@ -651,210 +704,251 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
 
             {/* SECCIÓN DE PRODUCTOS - Lado derecho */}
             <div className="flex-1 space-y-4 overflow-y-auto pl-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 border-b pb-2 flex-1">Productos Utilizados</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={agregarProducto}
-                  disabled={!selectedServicioId}
-                  className="flex items-center gap-1 ml-4 bg-transparent"
+              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Productos Utilizados</h3>
+              
+              {/* Selector de productos - Searchable Combobox */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Agregar Producto</Label>
+                </div>
+                <Popover
+                  open={openProductoCombobox === -2} // Usamos -2 para el selector principal
+                  onOpenChange={(open) => {
+                    setOpenProductoCombobox(open ? -2 : -1)
+                    if (!open) setSearchProducto("")
+                  }}
                 >
-                  <Plus className="h-4 w-4" />
-                  Agregar
-                </Button>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openProductoCombobox === -2}
+                      className="w-full justify-between h-9 bg-transparent"
+                      disabled={!selectedServicioId || loadingProductos}
+                    >
+                      <span className="truncate">
+                        {loadingProductos
+                          ? "Cargando productos..."
+                          : !selectedServicioId
+                            ? "Selecciona un servicio primero"
+                            : "Selecciona un producto para agregar"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar producto por nombre..."
+                        value={searchProducto}
+                        onValueChange={setSearchProducto}
+                        className="h-9"
+                      />
+                      <CommandList className="max-h-[300px] overflow-auto">
+                        <CommandEmpty>No se encontraron productos</CommandEmpty>
+                        <CommandGroup>
+                          {productos.length === 0 ? (
+                            <CommandItem disabled>
+                              {!selectedServicioId
+                                ? "Selecciona un servicio primero"
+                                : loadingProductos
+                                  ? "Cargando productos..."
+                                  : "No hay productos disponibles"}
+                            </CommandItem>
+                          ) : (
+                            productos
+                              .filter(
+                                (prod) =>
+                                  // Filtrar por texto de búsqueda
+                                  (searchProducto === "" ||
+                                    prod.nombre.toLowerCase().includes(searchProducto.toLowerCase())) &&
+                                  // Solo mostrar productos con stock
+                                  prod.stock > 0 &&
+                                  // No mostrar productos que ya están en la lista
+                                  !productosUsados.some(p => p.productoId === prod.id)
+                              )
+                              .map((prod) => (
+                                <CommandItem
+                                  key={prod.id}
+                                  value={prod.nombre}
+                                  onSelect={() => {
+                                    agregarProducto(prod.id)
+                                    setOpenProductoCombobox(-1)
+                                  }}
+                                  className="flex items-center justify-between px-3 py-2"
+                                >
+                                  <div className="flex items-center">
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{prod.nombre}</span>
+                                      <span
+                                        className={cn(
+                                          "text-xs",
+                                          prod.stock <= 5
+                                            ? "text-amber-500 font-medium"
+                                            : "text-muted-foreground",
+                                        )}
+                                      >
+                                        Stock: {prod.stock} {prod.stock <= 5 && "(¡Bajo!)"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {prod.precio !== undefined && (
+                                    <span className="ml-4 whitespace-nowrap text-sm font-medium">
+                                      S/
+                                      {Number(prod.precio).toLocaleString("es-PE", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </span>
+                                  )}
+                                </CommandItem>
+                              ))
+                          )}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
-
-              <div className="space-y-3">
+              
+              {/* Tabla de productos */}
+              <div className="border rounded-md overflow-hidden">
                 {productosUsados.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-muted-foreground bg-gray-50">
                     <p>No hay productos agregados</p>
-                    <p className="text-sm">Selecciona un servicio y haz clic en "Agregar" para comenzar</p>
+                    <p className="text-sm">Selecciona un producto del menú desplegable para agregar</p>
                   </div>
                 ) : (
-                  productosUsados.map((producto, index) => (
-                    <div key={index} className="grid grid-cols-1 gap-3 p-4 border rounded-lg bg-gray-50">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Producto</Label>
-                        <Popover
-                          open={index === openProductoCombobox}
-                          onOpenChange={(open) => {
-                            setOpenProductoCombobox(open ? index : -1)
-                            if (!open) setSearchProducto("")
-                          }}
-                        >
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={index === openProductoCombobox}
-                              className="w-full justify-between h-9 bg-transparent"
-                              disabled={!selectedServicioId || loadingProductos}
-                            >
-                              <span className="truncate">
-                                {producto.productoId > 0 && productos.find((p) => p.id === producto.productoId)
-                                  ? `${productos.find((p) => p.id === producto.productoId)?.nombre}`
-                                  : loadingProductos
-                                    ? "Cargando productos..."
-                                    : !selectedServicioId
-                                      ? "Selecciona un servicio primero"
-                                      : "Selecciona producto"}
-                              </span>
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[400px] p-0" align="start">
-                            <Command>
-                              <CommandInput
-                                placeholder="Buscar producto por nombre..."
-                                value={searchProducto}
-                                onValueChange={setSearchProducto}
-                                className="h-9"
-                              />
-                              <CommandList className="max-h-[300px] overflow-auto">
-                                <CommandEmpty>No se encontraron productos</CommandEmpty>
-                                <CommandGroup>
-                                  {productos.length === 0 ? (
-                                    <CommandItem disabled>
-                                      {!selectedServicioId
-                                        ? "Selecciona un servicio primero"
-                                        : loadingProductos
-                                          ? "Cargando productos..."
-                                          : "No hay productos disponibles"}
-                                    </CommandItem>
-                                  ) : (
-                                    productos
-                                      .filter(
-                                        (prod) =>
-                                          (searchProducto === "" ||
-                                            prod.nombre.toLowerCase().includes(searchProducto.toLowerCase())) &&
-                                          prod.stock > 0,
-                                      )
-                                      .map((prod) => (
-                                        <CommandItem
-                                          key={prod.id}
-                                          value={prod.nombre}
-                                          onSelect={() => {
-                                            actualizarProducto(index, "productoId", prod.id)
-                                            setOpenProductoCombobox(-1)
-                                          }}
-                                          className="flex items-center justify-between px-3 py-2"
-                                        >
-                                          <div className="flex items-center">
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4 flex-shrink-0",
-                                                producto.productoId === prod.id ? "opacity-100" : "opacity-0",
-                                              )}
-                                            />
-                                            <div className="flex flex-col">
-                                              <span className="font-medium">{prod.nombre}</span>
-                                              <span
-                                                className={cn(
-                                                  "text-xs",
-                                                  prod.stock <= 5
-                                                    ? "text-amber-500 font-medium"
-                                                    : "text-muted-foreground",
-                                                )}
-                                              >
-                                                Stock: {prod.stock} {prod.stock <= 5 && "(¡Bajo!)"}
-                                              </span>
-                                            </div>
-                                          </div>
-                                          {prod.precio !== undefined && (
-                                            <span className="ml-4 whitespace-nowrap text-sm font-medium">
-                                              S/
-                                              {Number(prod.precio).toLocaleString("es-PE", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                              })}
-                                            </span>
-                                          )}
-                                        </CommandItem>
-                                      ))
-                                  )}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-sm">Cantidad</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max={
-                              producto.productoId > 0
-                                ? productos.find((p) => p.id === producto.productoId)?.stock || 1
-                                : 1
-                            }
-                            value={producto.cantidadUsada}
-                            onChange={(e) => {
-                              const newValue = Number.parseInt(e.target.value)
-                              const maxStock =
-                                producto.productoId > 0
-                                  ? productos.find((p) => p.id === producto.productoId)?.stock || 1
-                                  : 1
-                              const limitedValue = Math.min(newValue, maxStock)
-                              actualizarProducto(index, "cantidadUsada", limitedValue)
-                            }}
-                            className="h-9"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label className="text-sm">Precio</Label>
-                          <Input
-                            type="text"
-                            value={`S/${Number(producto.precioEnUso).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                            readOnly
-                            className="bg-muted cursor-not-allowed h-9 text-sm"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label className="text-sm">Subtotal</Label>
-                          <Input
-                            type="text"
-                            value={`S/${Number(producto.subtotal).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                            readOnly
-                            className="bg-muted cursor-not-allowed h-9 text-sm font-medium"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => eliminarProducto(index)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Eliminar
-                        </Button>
-                      </div>
+                  <div>
+                    {/* Encabezados de la tabla */}
+                    <div className="grid grid-cols-12 gap-2 bg-gray-100 p-3 font-medium text-sm border-b">
+                      <div className="col-span-5">Producto</div>
+                      <div className="col-span-2 text-center">Cantidad</div>
+                      <div className="col-span-2 text-right">Precio Unit.</div>
+                      <div className="col-span-2 text-right">Subtotal</div>
+                      <div className="col-span-1"></div>
                     </div>
-                  ))
+                    
+                    {/* Filas de la tabla */}
+                    <div className="divide-y">
+                      {productosUsados.map((producto, index) => {
+                        const productoInfo = productos.find((p) => p.id === producto.productoId)
+                        const maxStock = productoInfo?.stock || 1
+                        
+                        return (
+                          <div key={index} className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-gray-50">
+                            {/* Nombre del producto */}
+                            <div className="col-span-5">
+                              {productoInfo ? (
+                                <div>
+                                  <div className="font-medium">{productoInfo.nombre}</div>
+                                  <div className={cn(
+                                    "text-xs",
+                                    maxStock <= 5 ? "text-amber-500" : "text-muted-foreground"
+                                  )}>
+                                    Stock: {maxStock} {maxStock <= 5 && "(¡Bajo!)"}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground italic">Selecciona un producto</span>
+                              )}
+                            </div>
+                            
+                            {/* Cantidad */}
+                            <div className="col-span-2">
+                              <Input
+                                type="number"
+                                min="1"
+                                max={maxStock}
+                                value={producto.cantidadUsada}
+                                onChange={(e) => {
+                                  const newValue = Number.parseInt(e.target.value) || 1
+                                  const limitedValue = Math.min(Math.max(1, newValue), maxStock)
+                                  actualizarProducto(index, "cantidadUsada", limitedValue)
+                                }}
+                                className="h-8 text-center"
+                              />
+                            </div>
+                            
+                            {/* Precio unitario */}
+                            <div className="col-span-2 text-right">
+                              S/{Number(producto.precioEnUso).toLocaleString("es-PE", { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </div>
+                            
+                            {/* Subtotal */}
+                            <div className="col-span-2 text-right font-medium">
+                              S/{Number(producto.subtotal).toLocaleString("es-PE", { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                              })}
+                            </div>
+                            
+                            {/* Botón eliminar */}
+                            <div className="col-span-1 text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => eliminarProducto(index)}
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    
+                    {/* Total de productos */}
+                    <div className="grid grid-cols-12 gap-2 p-3 border-t bg-gray-50 font-medium">
+                      <div className="col-span-9 text-right">Total productos:</div>
+                      <div className="col-span-2 text-right">
+                        S/{totalProductos.toLocaleString("es-PE", { 
+                          minimumFractionDigits: 2, 
+                          maximumFractionDigits: 2 
+                        })}
+                      </div>
+                      <div className="col-span-1"></div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* BOTONES - Parte inferior */}
+          {/* TOTAL GENERAL - Parte inferior */}
           <Separator className="my-4" />
-          <div className="flex justify-end space-x-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Guardando..." : mantenimiento ? "Actualizar" : "Crear"}
-            </Button>
+          <div className="flex justify-between items-center pt-2">
+            <div className="bg-gray-100 p-4 rounded-lg border shadow-sm w-full max-w-md">
+              <div className="flex flex-col space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Productos:</span>
+                  <span>S/{totalProductos.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Servicio ({selectedServicio?.nombre || "No seleccionado"}):</span>
+                  <span>S/{precioServicio.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <Separator className="my-1" />
+                <div className="flex justify-between font-bold text-xl">
+                  <span>Total:</span>
+                  <span>S/{totalGeneral.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex space-x-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Guardando..." : mantenimiento ? "Actualizar" : "Crear"}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
