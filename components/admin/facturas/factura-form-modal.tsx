@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -24,13 +24,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
 import { facturasApi } from "@/lib/facturas-api"
 import { mantenimientosApi } from "@/lib/mantenimientos-api"
 import { productosMantenimientoApi } from "@/lib/mantenimientos-api"
 import type { MantenimientoPendienteFacturar, CalculatedTotalResponse, FacturaRequest } from "@/types/facturas"
+import { MetodoPago } from "@/types/facturas"
 import type { ProductoResponse, MantenimientoProductoRequest } from "@/types/mantenimientos"
-import { Car, User, Wrench, Package, Receipt, PlusCircle, Trash2, Loader2 } from "lucide-react"
+import { Car, User, Wrench, Package, Receipt, PlusCircle, Trash2, Loader2, Upload, CreditCard, FileText } from "lucide-react"
 
 interface FacturaFormModalProps {
   open: boolean
@@ -62,6 +64,15 @@ export function FacturaFormModal({
   const [actualizandoProductos, setActualizandoProductos] = useState(false)
   // Inicializar con el valor correcto del total calculado
   const [totalCalculado, setTotalCalculado] = useState(calculatedTotal?.totalCalculado || 0)
+  
+  // Nuevos estados para los campos adicionales
+  const [metodoPago, setMetodoPago] = useState<MetodoPago>(MetodoPago.EN_EFECTIVO)
+  const [nroOperacion, setNroOperacion] = useState<string>("")
+  const [imagenOperacion, setImagenOperacion] = useState<File | null>(null)
+  const [imagenPreview, setImagenPreview] = useState<string | null>(null)
+  
+  // Ref para el input de archivo
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Cargar datos completos del mantenimiento cuando se abre el modal
   useEffect(() => {
@@ -124,33 +135,61 @@ export function FacturaFormModal({
   
   // Función para formatear el precio
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CO", {
+    return new Intl.NumberFormat("es-PE", {
       style: "currency",
-      currency: "COP",
+      currency: "PEN",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(amount).replace(/COP/g, "$")
+      currencyDisplay: "narrowSymbol",
+    }).format(amount).replace("PEN", "S/");
   }
+  
+  // Función para manejar la selección de imagen
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImagenOperacion(file);
+      
+      // Crear una URL para previsualizar la imagen
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagenPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  // Función para limpiar la imagen seleccionada
+  const clearImage = () => {
+    setImagenOperacion(null);
+    setImagenPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
   
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLoading(true)
 
     try {
-      setLoading(true)
-
       const facturaRequest: FacturaRequest = {
         mantenimientoId: mantenimiento.id,
-        clienteId: mantenimiento.vehiculo?.cliente?.id || 0,
-        tallerId: mantenimiento.servicio?.taller?.id || 0,
-        detalles: detalles.trim() || undefined,
+        clienteId: mantenimiento.vehiculo.cliente.id,
+        tallerId: mantenimiento.servicio.taller.id,
+        detalles: detalles || undefined,
+        metodoPago: metodoPago,
+        nroOperacion: nroOperacion || undefined,
       }
 
-      await facturasApi.create(facturaRequest)
+      await facturasApi.create(facturaRequest, imagenOperacion || undefined)
+      toast.success("Factura creada exitosamente")
       onSuccess()
+      onOpenChange(false)
     } catch (error) {
-      console.error("Error al crear factura:", error)
+      console.error("Error al crear la factura:", error)
       toast.error("Error al crear la factura")
     } finally {
       setLoading(false)
@@ -294,6 +333,103 @@ export function FacturaFormModal({
                 <div className="text-xl font-bold">{formatCurrency(totalCalculado)}</div>
               </div>
             </div>
+          </div>
+          
+          {/* Método de Pago */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Método de Pago
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="metodoPago">Seleccione el método de pago</Label>
+                <Select 
+                  value={metodoPago} 
+                  onValueChange={(value) => setMetodoPago(value as MetodoPago)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione método de pago" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={MetodoPago.EN_EFECTIVO}>Efectivo</SelectItem>
+                    <SelectItem value={MetodoPago.TRANSFERENCIA}>Transferencia</SelectItem>
+                    <SelectItem value={MetodoPago.YAPE}>Yape</SelectItem>
+                    <SelectItem value={MetodoPago.PLIN}>Plin</SelectItem>
+                    <SelectItem value={MetodoPago.DEPOSITO}>Depósito</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {metodoPago !== MetodoPago.EN_EFECTIVO && (
+                <div className="space-y-2">
+                  <Label htmlFor="nroOperacion">Número de Operación</Label>
+                  <Input
+                    id="nroOperacion"
+                    placeholder="Ingrese el número de operación"
+                    value={nroOperacion}
+                    onChange={(e) => setNroOperacion(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+            
+            {/* Imagen de Operación (solo para métodos que no sean efectivo) */}
+            {metodoPago !== MetodoPago.EN_EFECTIVO && (
+              <Card className="mt-4">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Comprobante de Pago
+                    </h4>
+                  </div>
+                  
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-4">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Subir Imagen
+                      </Button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      
+                      {imagenPreview && (
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={clearImage}
+                        >
+                          Eliminar
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {imagenPreview && (
+                      <div className="mt-2 border rounded-md overflow-hidden">
+                        <img 
+                          src={imagenPreview} 
+                          alt="Vista previa del comprobante" 
+                          className="max-h-64 object-contain mx-auto"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Detalles Adicionales */}

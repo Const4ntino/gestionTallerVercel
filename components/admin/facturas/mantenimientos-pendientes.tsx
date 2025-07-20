@@ -75,10 +75,13 @@ export function MantenimientosPendientes() {
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CO", {
+    return new Intl.NumberFormat("es-PE", {
       style: "currency",
-      currency: "COP",
-    }).format(amount)
+      currency: "PEN",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      currencyDisplay: "narrowSymbol",
+    }).format(amount).replace("PEN", "S/")
   }
 
   const formatDate = (dateString: string) => {

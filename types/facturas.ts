@@ -61,6 +61,10 @@ export interface FacturaResponse {
   total: number
   detalles: string
   pdfUrl: string | null
+  codigoFactura?: string
+  metodoPago: MetodoPago
+  nroOperacion?: string
+  imagenOperacion?: string
 }
 
 export interface FacturaRequest {
@@ -69,6 +73,9 @@ export interface FacturaRequest {
   tallerId: number
   detalles?: string
   pdfUrl?: string | null
+  metodoPago: MetodoPago
+  nroOperacion?: string
+  imagenOperacion?: string
 }
 
 export interface CalculatedTotalResponse {
@@ -133,7 +140,17 @@ export interface FacturaFilterParams {
   fechaEmisionHasta?: string
   minTotal?: number
   maxTotal?: number
+  metodoPago?: MetodoPago
   page?: number
   size?: number
   sort?: string
+}
+
+// Enum para métodos de pago (debe coincidir con el backend)
+export enum MetodoPago {
+  EN_EFECTIVO = "EN_EFECTIVO",
+  TRANSFERENCIA = "TRANSFERENCIA",
+  YAPE = "YAPE",
+  PLIN = "PLIN",
+  DEPOSITO = "DEPOSITO"
 }

@@ -39,17 +39,19 @@ export const empresaApi = {
   },
 
   // Subir imagen (logo)
-  uploadImage: async (file: File): Promise<ArchivoResponse> => {
+  uploadImage: async (file: File): Promise<{ url: string }> => {
     const formData = new FormData()
     formData.append("archivo", file)
 
-    const response = await fetch(`${API_BASE_URL}/api/archivos/subir-imagen`, {
+    const response = await fetch(`${API_BASE_URL}/api/archivos/subir-logo`, {
       method: "POST",
       headers: getAuthHeadersMultipart(),
       body: formData,
     })
 
     if (!response.ok) throw new Error("Error al subir la imagen")
-    return response.json()
+    // El backend devuelve una cadena de texto con la URL, no un JSON
+    const url = await response.text()
+    return { url } // Convertimos la respuesta de texto a un objeto con la propiedad url
   },
 }

@@ -235,23 +235,12 @@ export function EmpresaForm() {
             {errors.direccion && <p className="text-sm text-destructive">{errors.direccion.message}</p>}
           </div>
 
-          {/* Descripción - Ancho completo */}
-          <div className="space-y-2">
-            <Label htmlFor="descripcion">Descripción</Label>
-            <Textarea
-              id="descripcion"
-              {...register("descripcion")}
-              placeholder="Descripción de la empresa (opcional)"
-              rows={4}
-            />
-            {errors.descripcion && <p className="text-sm text-destructive">{errors.descripcion.message}</p>}
-          </div>
-
-          {/* Sección del Logo */}
-          <div className="space-y-4">
-            <Label>Logo de la Empresa</Label>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Secciones de Logo y Descripción en grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+            {/* CUADRO ROJO - Sección del Logo */}
+            <div className="space-y-4 border border-transparent">
+              <Label className="text-lg font-medium">Logo de la Empresa</Label>
+              
               {/* Controles de subida */}
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -274,14 +263,14 @@ export function EmpresaForm() {
                   ) : (
                     <>
                       <Upload className="mr-2 h-4 w-4" />
-                      Subir Logo
+                      Eliminar logo actual y subir logo seleccionado
                     </>
                   )}
                 </Button>
               </div>
 
               {/* Vista previa del logo */}
-              <div className="space-y-2">
+              <div className="space-y-2 mt-4">
                 <Label>Vista Previa</Label>
                 <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 aspect-square flex items-center justify-center bg-muted/10">
                   {logoUrl ? (
@@ -299,20 +288,49 @@ export function EmpresaForm() {
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Botón de guardar */}
-          <div className="flex justify-end pt-6">
-            <Button type="submit" disabled={isLoading} className="min-w-[120px]">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                "Actualizar Datos"
-              )}
-            </Button>
+            {/* CUADRO AZUL - Descripción y Botones */}
+            <div className="space-y-6 border border-transparent">
+              {/* Descripción */}
+              <div className="space-y-2">
+                <Label htmlFor="descripcion" className="text-lg font-medium">Descripción</Label>
+                <Textarea
+                  id="descripcion"
+                  {...register("descripcion")}
+                  placeholder="Descripción de la empresa (opcional)"
+                  rows={8}
+                  className="min-h-[200px]"
+                />
+                {errors.descripcion && <p className="text-sm text-destructive">{errors.descripcion.message}</p>}
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex justify-end gap-4 pt-6">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={loadEmpresaData} 
+                  disabled={isLoading}
+                  className="min-w-[120px]"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isLoading} 
+                  className="min-w-[120px]"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    "Actualizar Datos"
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         </form>
       </CardContent>
