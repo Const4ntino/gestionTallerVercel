@@ -75,6 +75,7 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
             value={value}
             onChange={(e) => handleFilterChange(filter.key, e.target.value)}
             placeholder={`Filtrar por ${filter.label.toLowerCase()}`}
+            className="h-8 text-sm"
           />
         )
 
@@ -82,7 +83,7 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
         const options = filter.options || additionalData?.[filter.key] || []
         return (
           <Select value={value || "all"} onValueChange={(val) => handleFilterChange(filter.key, val)}>
-            <SelectTrigger>
+            <SelectTrigger className="h-8 text-sm">
               <SelectValue placeholder={`Seleccionar ${filter.label.toLowerCase()}`} />
             </SelectTrigger>
             <SelectContent>
@@ -115,7 +116,7 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
                 handleFilterChange(filter.key, "");
               }
             }}
-            className="w-full"
+            className="w-full h-8 text-sm"
           />
         )
 
@@ -153,8 +154,8 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-4 max-h-[80vh] overflow-y-auto" align="start">
-        <div className="space-y-4">
+      <PopoverContent className="w-96 p-3 max-h-[50vh] overflow-y-auto" align="start">
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">Filtros Avanzados</h4>
             <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
@@ -162,20 +163,20 @@ export function AdvancedFilters({ filters, onApplyFilters, onClearFilters, addit
             </Button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {filters.map((filter) => (
-              <div key={filter.key} className="space-y-2">
-                <Label htmlFor={filter.key}>{filter.label}</Label>
+              <div key={filter.key} className="space-y-1">
+                <Label htmlFor={filter.key} className="text-sm">{filter.label}</Label>
                 {renderFilterInput(filter)}
               </div>
             ))}
           </div>
 
-          <div className="flex gap-2 pt-4 border-t">
-            <Button onClick={handleApplyFilters} className="flex-1">
+          <div className="flex gap-2 pt-2 mt-2 border-t">
+            <Button onClick={handleApplyFilters} className="flex-1 h-8 text-sm">
               Aplicar Filtros
             </Button>
-            <Button variant="outline" onClick={handleClearFilters}>
+            <Button variant="outline" onClick={handleClearFilters} className="h-8 text-sm">
               Limpiar
             </Button>
           </div>

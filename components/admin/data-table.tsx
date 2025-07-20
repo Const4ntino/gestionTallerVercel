@@ -56,15 +56,13 @@ export function DataTable<T extends Record<string, any>>({
   }
 
   const handleClearSearch = () => {
+    // Limpiar el término de búsqueda inmediatamente
     setSearchTerm("")
+    
+    // Ejecutar la búsqueda inmediatamente con un término vacío
     if (onSearch) {
+      // Llamar directamente a la función de búsqueda con cadena vacía
       onSearch("")
-      // Dar tiempo para que se actualice el estado antes de recargar
-      setTimeout(() => {
-        if (onPageChange) {
-          onPageChange(0) // Volver a la primera página
-        }
-      }, 100)
     }
   }
 

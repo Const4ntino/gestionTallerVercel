@@ -172,6 +172,13 @@ export function FacturaFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validar que el número de operación sea obligatorio cuando el método de pago no es EFECTIVO
+    if (metodoPago !== MetodoPago.EN_EFECTIVO && (!nroOperacion || nroOperacion.trim() === "")) {
+      toast.error("El número de operación es obligatorio para este método de pago")
+      return
+    }
+    
     setLoading(true)
 
     try {
@@ -241,10 +248,15 @@ export function FacturaFormModal({
                   <span>{mantenimiento.vehiculo?.cliente?.usuario?.nombreCompleto || "Cliente no disponible"}</span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Wrench className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Servicio:</span>
-                  <span>{mantenimiento.servicio?.nombre || "Servicio no disponible"}</span>
+                <div className="flex items-center gap-2 justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wrench className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Servicio:</span>
+                    <span>{mantenimiento.servicio?.nombre || "Servicio no disponible"}</span>
+                  </div>
+                  <Badge variant="secondary" className="ml-2">
+                    S/ {mantenimiento.servicio?.precioBase?.toLocaleString('es-PE', { minimumFractionDigits: 2 }) || '0.00'}
+                  </Badge>
                 </div>
               </div>
 
@@ -327,8 +339,23 @@ export function FacturaFormModal({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Resumen de Facturación</h3>
 
-            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
-              <div className="flex justify-between items-center py-4">
+            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
+              {/* Precio base del servicio */}
+              <div className="flex justify-between items-center border-b pb-2">
+                <div className="font-medium">Precio base del servicio:</div>
+                <div className="font-medium">{formatCurrency(mantenimiento.servicio?.precioBase || 0)}</div>
+              </div>
+              
+              {/* Subtotal de productos */}
+              {productosUsados.length > 0 && (
+                <div className="flex justify-between items-center border-b pb-2">
+                  <div className="font-medium">Subtotal de productos:</div>
+                  <div className="font-medium">{formatCurrency(productosUsados.reduce((sum, p) => sum + p.subtotal, 0))}</div>
+                </div>
+              )}
+              
+              {/* Total */}
+              <div className="flex justify-between items-center pt-2">
                 <div className="text-lg font-semibold">Total a Facturar:</div>
                 <div className="text-xl font-bold">{formatCurrency(totalCalculado)}</div>
               </div>
@@ -364,13 +391,21 @@ export function FacturaFormModal({
               
               {metodoPago !== MetodoPago.EN_EFECTIVO && (
                 <div className="space-y-2">
-                  <Label htmlFor="nroOperacion">Número de Operación</Label>
+                  <Label htmlFor="nroOperacion" className="flex items-center gap-1">
+                    Número de Operación
+                    <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="nroOperacion"
                     placeholder="Ingrese el número de operación"
                     value={nroOperacion}
                     onChange={(e) => setNroOperacion(e.target.value)}
+                    required
+                    className={!nroOperacion ? "border-destructive" : ""}
                   />
+                  {!nroOperacion && (
+                    <p className="text-xs text-destructive mt-1">Este campo es obligatorio</p>
+                  )}
                 </div>
               )}
             </div>

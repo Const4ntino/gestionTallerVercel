@@ -21,6 +21,7 @@ export interface FacturaResponse {
         id: number
         nombre: string
       }
+      precioBase: number
     }
     trabajador: {
       id: number
@@ -104,6 +105,7 @@ export interface MantenimientoPendienteFacturar {
       id: number
       nombre: string
     }
+    precioBase: number
   }
   trabajador: {
     id: number

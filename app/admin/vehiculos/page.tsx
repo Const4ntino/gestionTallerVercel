@@ -111,22 +111,86 @@ export default function VehiculosAdminPage() {
 
   // Clear filters
   const handleClearFilters = () => {
-    setFilters({
+    // Limpiar completamente todos los filtros
+    const emptyFilters = {
       search: "",
       estado: "",
       tallerAsignadoId: undefined,
       fechaCreacionDesde: "",
       fechaCreacionHasta: "",
-    })
+    }
+    
+    setFilters(emptyFilters)
     setCurrentPage(0)
-    setTimeout(loadVehiculos, 100)
+    
+    // Cargar vehículos sin ningún parámetro de filtro
+    const loadWithoutFilters = async () => {
+      setIsLoading(true)
+      try {
+        const response = await vehiculosAdminApi.filter({
+          page: 0,
+          size: pageSize,
+          sort: "fechaCreacion,desc"
+        })
+        setVehiculos(response.content)
+        setTotalPages(response.totalPages)
+        setTotalElements(response.totalElements)
+      } catch (error) {
+        console.error("Error loading vehiculos:", error)
+        toast.error("Error al cargar vehículos")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    // Ejecutar inmediatamente
+    loadWithoutFilters()
   }
 
   // Handle search
   const handleSearch = (search: string) => {
-    setFilters((prev) => ({ ...prev, search }))
+    // Crear una copia de los filtros actuales con el nuevo término de búsqueda
+    const updatedFilters = {
+      ...filters,
+      search
+    }
+    
+    // Actualizar el estado de filtros
+    setFilters(updatedFilters)
     setCurrentPage(0)
-    setTimeout(loadVehiculos, 100)
+    
+    // Cargar vehículos directamente con los filtros actualizados sin esperar a que se actualice el estado
+    const loadWithSearch = async () => {
+      setIsLoading(true)
+      try {
+        const params = {
+          ...updatedFilters,
+          page: 0,
+          size: pageSize,
+          sort: "fechaCreacion,desc"
+        }
+        
+        // Limpiar filtros vacíos
+        Object.keys(params).forEach((key) => {
+          if (params[key as keyof typeof params] === "" || params[key as keyof typeof params] === undefined) {
+            delete params[key as keyof typeof params]
+          }
+        })
+        
+        const response = await vehiculosAdminApi.filter(params)
+        setVehiculos(response.content)
+        setTotalPages(response.totalPages)
+        setTotalElements(response.totalElements)
+      } catch (error) {
+        console.error("Error loading vehiculos:", error)
+        toast.error("Error al cargar vehículos")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    // Ejecutar inmediatamente
+    loadWithSearch()
   }
 
   // Handle create/edit
@@ -334,8 +398,17 @@ export default function VehiculosAdminPage() {
                     <div className="relative">
                       <Input
                         type="date"
-                        value={filters.fechaCreacionDesde}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, fechaCreacionDesde: e.target.value }))}
+                        value={filters.fechaCreacionDesde ? filters.fechaCreacionDesde.substring(0, 10) : ""}
+                        onChange={(e) => {
+                          const selectedDate = e.target.value;
+                          if (selectedDate) {
+                            // Convertir a formato ISO DATE_TIME (añadiendo T00:00:00Z al final)
+                            const isoDateTime = `${selectedDate}T00:00:00.000Z`;
+                            setFilters((prev) => ({ ...prev, fechaCreacionDesde: isoDateTime }));
+                          } else {
+                            setFilters((prev) => ({ ...prev, fechaCreacionDesde: "" }));
+                          }
+                        }}
                       />
                       <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                     </div>
@@ -347,8 +420,17 @@ export default function VehiculosAdminPage() {
                     <div className="relative">
                       <Input
                         type="date"
-                        value={filters.fechaCreacionHasta}
-                        onChange={(e) => setFilters((prev) => ({ ...prev, fechaCreacionHasta: e.target.value }))}
+                        value={filters.fechaCreacionHasta ? filters.fechaCreacionHasta.substring(0, 10) : ""}
+                        onChange={(e) => {
+                          const selectedDate = e.target.value;
+                          if (selectedDate) {
+                            // Convertir a formato ISO DATE_TIME (añadiendo T23:59:59Z al final para incluir todo el día)
+                            const isoDateTime = `${selectedDate}T23:59:59.999Z`;
+                            setFilters((prev) => ({ ...prev, fechaCreacionHasta: isoDateTime }));
+                          } else {
+                            setFilters((prev) => ({ ...prev, fechaCreacionHasta: "" }));
+                          }
+                        }}
                       />
                       <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                     </div>

@@ -59,9 +59,19 @@ export function GestionFacturas() {
     try {
       setLoading(true)
 
+      // Crear una copia de los filtros y eliminar valores vacíos
+      const cleanedFilters = { ...filters }
+      
+      // Eliminar metodoPago si no es un valor válido del enum para evitar enviar valores no válidos al backend
+      // El valor vacío "" viene del selector cuando se selecciona "Todos los métodos"
+      if (!cleanedFilters.metodoPago || 
+          !Object.values(MetodoPago).includes(cleanedFilters.metodoPago as MetodoPago)) {
+        delete cleanedFilters.metodoPago
+      }
+
       const filterParams: FacturaFilterParams = {
-        ...filters,
-        search: filters.search?.trim() || undefined,
+        ...cleanedFilters,
+        search: cleanedFilters.search?.trim() || undefined,
         page: currentPage,
         size: currentSize,
       }
@@ -118,6 +128,7 @@ export function GestionFacturas() {
   const handleClearFilters = () => {
     setCurrentFilters({})
     setSearchTerm("")
+    setDebouncedSearchTerm("") // También actualizar el término de búsqueda con debounce
     setPage(0)
     loadFacturas(0, size, {})
   }
