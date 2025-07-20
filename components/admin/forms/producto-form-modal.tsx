@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
+import { Archive } from "lucide-react"
 import { productosApi, categoriasProductoApi } from "@/lib/productos-api"
 import { talleresApi } from "@/lib/admin-api"
 import type { ProductoResponse, ProductoRequest, CategoriaProductoResponse, TallerResponse } from "@/types/productos"
@@ -224,15 +225,26 @@ export function ProductoFormModal({ open, onOpenChange, producto, onSuccess }: P
 
             <div className="space-y-2">
               <Label htmlFor="stock">Stock</Label>
-              <Input
-                id="stock"
-                value={formData.stock}
-                onChange={(e) => handleChange("stock", e.target.value)}
-                placeholder="0"
-                type="number"
-                min="0"
-                required
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="stock"
+                  value={formData.stock}
+                  onChange={(e) => handleChange("stock", e.target.value)}
+                  placeholder="0"
+                  type="number"
+                  min="0"
+                  required
+                />
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => handleChange("stock", "0")}
+                  title="Limpiar stock"
+                >
+                  <Archive className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
