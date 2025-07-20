@@ -13,7 +13,6 @@ import type { FacturaResponse, FacturaFilterParams } from "@/types/facturas"
 import { MetodoPago } from "@/types/facturas"
 import type { PageResponse } from "@/types/admin"
 import { Search, FileText, Eye, Download, Trash2, X, ImageIcon, Receipt, CreditCard } from "lucide-react"
-import { debounce } from "lodash"
 
 interface FilterParams {
   search?: string
@@ -39,16 +38,21 @@ export function GestionFacturas() {
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
 
-  // Función debounced para búsqueda automática
-  const debouncedSearch = useCallback(
-    debounce((term: string) => {
-      if (term.length >= 2 || term.length === 0) {
-        setPage(0)
-        loadFacturas(0, size, { ...currentFilters, search: term })
+  // Función personalizada para manejar el debounce de la búsqueda
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  
+  useEffect(() => {
+    // Crear un timer para retrasar la búsqueda
+    const timer = setTimeout(() => {
+      if (debouncedSearchTerm.length >= 2 || debouncedSearchTerm.length === 0) {
+        setPage(0);
+        loadFacturas(0, size, { ...currentFilters, search: debouncedSearchTerm });
       }
-    }, 500),
-    [currentFilters, size],
-  )
+    }, 500);
+    
+    // Limpiar el timer si el término cambia antes de que se ejecute
+    return () => clearTimeout(timer);
+  }, [debouncedSearchTerm, currentFilters, size]);
 
   const loadFacturas = async (currentPage = page, currentSize = size, filters: FilterParams = {}) => {
     try {
@@ -101,7 +105,7 @@ export function GestionFacturas() {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
-    debouncedSearch(term)
+    setDebouncedSearchTerm(term)
   }
 
   const handleApplyFilters = (filters: FilterParams) => {
@@ -427,7 +431,6 @@ export function GestionFacturas() {
         pageSize={size}
         isLoading={loading}
         actions={actions}
-        showDetails={true}
         onViewDetails={handleViewDetails}
         emptyMessage="No se encontraron facturas"
         emptyIcon={FileText}
