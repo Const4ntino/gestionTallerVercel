@@ -4,21 +4,21 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { toast } from "sonner"
 import { facturasApi } from "@/lib/facturas-api"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
 import { DataTable } from "@/components/admin/data-table"
-import { DetailsModal } from "@/components/admin/details-modal"
 import type { FacturaResponse, FacturaFilterParams } from "@/types/facturas"
+import { MetodoPago } from "@/types/facturas"
 import type { PageResponse } from "@/types/admin"
-import { Search, FileText, Eye, Download, Trash2 } from "lucide-react"
+import { MoreHorizontal, FileText, Search, Filter, X, Eye, Download, Trash2 } from "lucide-react"
 
 export function GestionFacturas() {
   const [facturas, setFacturas] = useState<FacturaResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filters, setFilters] = useState<FacturaFilterParams>({})
-  const [showFilters, setShowFilters] = useState(false)
   const [selectedFactura, setSelectedFactura] = useState<FacturaResponse | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [page, setPage] = useState(0)
@@ -30,35 +30,20 @@ export function GestionFacturas() {
     try {
       setLoading(true)
 
-      const hasFilters =
-        Object.keys(filters).some(
-          (key) =>
-            filters[key as keyof FacturaFilterParams] !== undefined && filters[key as keyof FacturaFilterParams] !== "",
-        ) || searchTerm.trim() !== ""
-
-      if (hasFilters) {
-        const filterParams: FacturaFilterParams = {
-          ...filters,
-          search: searchTerm.trim() || undefined,
-          page,
-          size,
-        }
-
-        const response: PageResponse<FacturaResponse> = await facturasApi.filter(filterParams)
-        setFacturas(response.content)
-        setTotalPages(response.totalPages)
-        setTotalElements(response.totalElements)
-      } else {
-        const response = await facturasApi.getAll()
-        setFacturas(response)
-        // Simular paginación para getAll
-        const startIndex = page * size
-        const endIndex = startIndex + size
-        const paginatedData = response.slice(startIndex, endIndex)
-        setFacturas(paginatedData)
-        setTotalPages(Math.ceil(response.length / size))
-        setTotalElements(response.length)
+      // Siempre usamos el endpoint de filtrado con paginación del servidor
+      const filterParams: FacturaFilterParams = {
+        ...filters,
+        search: searchTerm.trim() || undefined,
+        page,
+        size,
+        // Podemos agregar sort si es necesario
+        // sort: "fechaEmision,desc",
       }
+
+      const response: PageResponse<FacturaResponse> = await facturasApi.filter(filterParams)
+      setFacturas(response.content)
+      setTotalPages(response.totalPages)
+      setTotalElements(response.totalElements)
     } catch (error) {
       console.error("Error al cargar facturas:", error)
       toast.error("Error al cargar las facturas")
@@ -98,15 +83,51 @@ export function GestionFacturas() {
     loadFacturas()
   }
 
-  const handleFilterChange = (newFilters: FacturaFilterParams) => {
-    setFilters(newFilters)
-    setPage(0)
+  const handleFilterChange = (newFilters: any) => {
+    // Convertir valores numéricos de string a number para la API
+    const processedFilters = { ...newFilters }
+    
+    if (processedFilters.minTotal) {
+      processedFilters.minTotal = Number(processedFilters.minTotal)
+    }
+    
+    if (processedFilters.maxTotal) {
+      processedFilters.maxTotal = Number(processedFilters.maxTotal)
+    }
+    
+    if (processedFilters.mantenimientoId) {
+      processedFilters.mantenimientoId = Number(processedFilters.mantenimientoId)
+    }
+    
+    if (processedFilters.clienteId) {
+      processedFilters.clienteId = Number(processedFilters.clienteId)
+    }
+    
+    if (processedFilters.tallerId) {
+      processedFilters.tallerId = Number(processedFilters.tallerId)
+    }
+    
+    setFilters(processedFilters)
+    setPage(0) // Reset to first page when filters change
+    loadFacturas() // Ejecutar la petición con los nuevos filtros
   }
 
   const clearFilters = () => {
     setFilters({})
     setSearchTerm("")
     setPage(0)
+    loadFacturas() // Ejecutar la petición al limpiar los filtros
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+    loadFacturas()
+  }
+
+  const handlePageSizeChange = (newSize: number) => {
+    setSize(newSize)
+    setPage(0) // Volver a la primera página al cambiar el tamaño
+    loadFacturas()
   }
 
   useEffect(() => {
@@ -131,22 +152,22 @@ export function GestionFacturas() {
   const columns = [
     {
       key: "id",
-      label: "ID",
+      header: "ID",
       render: (factura: FacturaResponse) => `#${factura.id}`,
     },
     {
       key: "cliente",
-      label: "Cliente",
+      header: "Cliente",
       render: (factura: FacturaResponse) => factura.cliente?.usuario?.nombreCompleto ?? "Sin cliente",
     },
     {
       key: "taller",
-      label: "Taller",
+      header: "Taller",
       render: (factura: FacturaResponse) => factura.taller?.nombre ?? "Sin taller",
     },
     {
       key: "vehiculo",
-      label: "Vehículo",
+      header: "Vehículo",
       render: (factura: FacturaResponse) => (
         <div>
           <div className="font-medium">{factura.mantenimiento.vehiculo.placa}</div>
@@ -158,27 +179,27 @@ export function GestionFacturas() {
     },
     {
       key: "servicio",
-      label: "Servicio",
+      header: "Servicio",
       render: (factura: FacturaResponse) => factura.mantenimiento.servicio.nombre,
     },
     {
-      key: "detalles",
-      label: "Detalles",
-      render: (factura: FacturaResponse) => factura.detalles ?? "",
-    },
-    {
       key: "fechaEmision",
-      label: "Fecha Emisión",
+      header: "Fecha Emisión",
       render: (factura: FacturaResponse) => formatDate(factura.fechaEmision),
     },
     {
       key: "total",
-      label: "Total",
-      render: (factura: FacturaResponse) => <span className="font-medium">{formatCurrency(factura.total)}</span>,
+      header: "Total",
+      render: (factura: FacturaResponse) => formatCurrency(factura.total),
+    },
+    {
+      key: "metodoPago",
+      header: "Método de Pago",
+      render: (factura: FacturaResponse) => factura.metodoPago,
     },
     {
       key: "acciones",
-      label: "Acciones",
+      header: "Acciones",
       render: (factura: FacturaResponse) => (
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => handleViewDetails(factura)}>
@@ -209,42 +230,70 @@ export function GestionFacturas() {
     {
       key: "mantenimientoId",
       label: "ID Mantenimiento",
-      type: "number" as const,
-      placeholder: "Buscar por ID de mantenimiento",
+      type: "text" as const,
+      placeholder: "ID del mantenimiento",
+      inputProps: { type: "number", min: 1 },
     },
     {
       key: "clienteId",
       label: "ID Cliente",
-      type: "number" as const,
-      placeholder: "Buscar por ID de cliente",
+      type: "text" as const,
+      placeholder: "ID del cliente",
+      inputProps: { type: "number", min: 1 },
     },
     {
       key: "tallerId",
       label: "ID Taller",
-      type: "number" as const,
-      placeholder: "Buscar por ID de taller",
+      type: "text" as const,
+      placeholder: "ID del taller",
+      inputProps: { type: "number", min: 1 },
     },
     {
       key: "fechaEmisionDesde",
       label: "Fecha Emisión Desde",
-      type: "datetime-local" as const,
+      type: "date" as const,
     },
     {
       key: "fechaEmisionHasta",
       label: "Fecha Emisión Hasta",
-      type: "datetime-local" as const,
+      type: "date" as const,
     },
     {
       key: "minTotal",
       label: "Total Mínimo",
-      type: "number" as const,
+      type: "text" as const,
       placeholder: "Monto mínimo",
+      inputProps: { 
+        type: "number", 
+        min: 0, 
+        step: 0.01,
+        className: "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      },
     },
     {
       key: "maxTotal",
       label: "Total Máximo",
-      type: "number" as const,
+      type: "text" as const,
       placeholder: "Monto máximo",
+      inputProps: { 
+        type: "number", 
+        min: 0, 
+        step: 0.01,
+        className: "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      },
+    },
+    {
+      key: "metodoPago",
+      label: "Método de Pago",
+      type: "select" as const,
+      options: [
+        { value: "", label: "Todos" },
+        { value: MetodoPago.EN_EFECTIVO, label: "Efectivo" },
+        { value: MetodoPago.TRANSFERENCIA, label: "Transferencia" },
+        { value: MetodoPago.YAPE, label: "Yape" },
+        { value: MetodoPago.PLIN, label: "Plin" },
+        { value: MetodoPago.DEPOSITO, label: "Depósito" },
+      ],
     },
   ]
 
@@ -279,75 +328,99 @@ export function GestionFacturas() {
               <Search className="h-4 w-4 mr-2" />
               Buscar
             </Button>
-            <Button 
-              variant="outline" 
-              disabled={true}
-              title="Los filtros avanzados están deshabilitados"
-            >
-              Filtros Avanzados
-            </Button>
+            <AdvancedFilters 
+              filters={filterFields} 
+              onApplyFilters={handleFilterChange} 
+              onClearFilters={clearFilters} 
+            />
             {(Object.keys(filters).length > 0 || searchTerm) && (
               <Button variant="outline" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-2" />
                 Limpiar
               </Button>
             )}
           </div>
-
-          {showFilters && (
-            <AdvancedFilters filters={filters} onFiltersChange={handleFilterChange} fields={filterFields} />
-          )}
         </CardContent>
       </Card>
 
       {/* Tabla de facturas */}
-      <DataTable
+      <DataTable<FacturaResponse>
         data={facturas}
-        columns={columns}
-        loading={loading}
-        emptyMessage="No se encontraron facturas"
-        emptyIcon={FileText}
+        columns={columns as any}
+        totalPages={totalPages}
+        currentPage={page}
+        totalElements={totalElements}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        pageSize={size}
+        isLoading={loading}
+        showDetails={true}
+        onViewDetails={handleViewDetails}
+        onSearch={(term) => {
+          setSearchTerm(term)
+          setPage(0)
+          loadFacturas()
+        }}
       />
 
-      {/* Paginación */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Mostrando {page * size + 1} a {Math.min((page + 1) * size, totalElements)} de {totalElements} resultados
-          </p>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={page === 0}>
-              Anterior
-            </Button>
-
-            <span className="text-sm">
-              Página {page + 1} de {totalPages}
-            </span>
-
-            <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages - 1}>
-              Siguiente
-            </Button>
+      {/* Modal de detalles */}
+      {showDetails && selectedFactura && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Detalles de la Factura #{selectedFactura.id}</h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowDetails(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Cliente</p>
+                  <p>{selectedFactura.cliente?.usuario?.nombreCompleto || "--"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Taller</p>
+                  <p>{selectedFactura.taller?.nombre || "--"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Vehículo</p>
+                  <p>{selectedFactura.mantenimiento?.vehiculo?.placa || "--"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Servicio</p>
+                  <p>{selectedFactura.mantenimiento?.servicio?.nombre || "--"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Fecha Emisión</p>
+                  <p>{formatDate(selectedFactura.fechaEmision)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total</p>
+                  <p className="font-medium">{formatCurrency(selectedFactura.total)}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Detalles</p>
+                <p>{selectedFactura.detalles || "Sin detalles"}</p>
+              </div>
+              {selectedFactura.pdfUrl && (
+                <div className="mt-4">
+                  <Button 
+                    onClick={() => {
+                      const getFullPdfUrl = (url: string) => url.startsWith('http') ? url : `http://localhost:8080${url}`;
+                      window.open(getFullPdfUrl(selectedFactura.pdfUrl!), "_blank");
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Descargar PDF
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
-
-      {/* Modal de detalles */}
-      <DetailsModal
-        open={showDetails}
-        onOpenChange={setShowDetails}
-        title="Detalles de la Factura"
-        fields={selectedFactura ? [
-          { label: "ID", value: selectedFactura.id },
-          { label: "Cliente", value: selectedFactura.cliente?.usuario?.nombreCompleto },
-          { label: "Taller", value: selectedFactura.taller?.nombre },
-          { label: "Vehículo", value: selectedFactura.mantenimiento?.vehiculo?.placa },
-          { label: "Servicio", value: selectedFactura.mantenimiento?.servicio?.nombre },
-          { label: "Fecha Emisión", value: selectedFactura.fechaEmision, type: "date" },
-          { label: "Total", value: selectedFactura.total, type: "currency" },
-          { label: "Detalles", value: selectedFactura.detalles },
-          { label: "PDF", value: selectedFactura.pdfUrl ? "Disponible" : "No disponible", type: selectedFactura.pdfUrl ? "badge" : "text", variant: selectedFactura.pdfUrl ? "default" : "secondary" },
-        ] : []}
-      />
     </div>
   )
 }
