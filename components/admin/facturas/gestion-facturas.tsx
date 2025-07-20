@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { facturasApi } from "@/lib/facturas-api"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
@@ -39,20 +40,20 @@ export function GestionFacturas() {
   const [totalElements, setTotalElements] = useState(0)
 
   // Función personalizada para manejar el debounce de la búsqueda
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+
   useEffect(() => {
     // Crear un timer para retrasar la búsqueda
     const timer = setTimeout(() => {
       if (debouncedSearchTerm.length >= 2 || debouncedSearchTerm.length === 0) {
-        setPage(0);
-        loadFacturas(0, size, { ...currentFilters, search: debouncedSearchTerm });
+        setPage(0)
+        loadFacturas(0, size, { ...currentFilters, search: debouncedSearchTerm })
       }
-    }, 500);
-    
+    }, 500)
+
     // Limpiar el timer si el término cambia antes de que se ejecute
-    return () => clearTimeout(timer);
-  }, [debouncedSearchTerm, currentFilters, size]);
+    return () => clearTimeout(timer)
+  }, [debouncedSearchTerm, currentFilters, size])
 
   const loadFacturas = async (currentPage = page, currentSize = size, filters: FilterParams = {}) => {
     try {
@@ -436,26 +437,24 @@ export function GestionFacturas() {
         emptyIcon={FileText}
       />
 
-      {/* Modal de detalles mejorado */}
-      {showDetails && selectedFactura && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-xl font-bold">Detalles de la Factura #{selectedFactura.id}</h3>
-                {selectedFactura.codigoFactura && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                    <Receipt className="h-4 w-4" />
-                    Código: {selectedFactura.codigoFactura}
-                  </p>
-                )}
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowDetails(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+      {/* Modal de detalles usando Dialog de shadcn/ui */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Detalles de la Factura #{selectedFactura?.id}
+              {selectedFactura?.codigoFactura && (
+                <span className="text-sm text-muted-foreground flex items-center gap-1 ml-2">
+                  <Receipt className="h-4 w-4" />
+                  Código: {selectedFactura.codigoFactura}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {selectedFactura && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               {/* Información del Cliente y Vehículo */}
               <Card>
                 <CardHeader>
@@ -574,9 +573,9 @@ export function GestionFacturas() {
                 </CardContent>
               </Card>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
