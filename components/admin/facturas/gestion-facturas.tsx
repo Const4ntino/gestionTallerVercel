@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { facturasApi } from "@/lib/facturas-api"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
@@ -11,7 +12,7 @@ import { DataTable } from "@/components/admin/data-table"
 import type { FacturaResponse, FacturaFilterParams } from "@/types/facturas"
 import { MetodoPago } from "@/types/facturas"
 import type { PageResponse } from "@/types/admin"
-import { Search, FileText, Eye, Download, Trash2, X } from "lucide-react"
+import { Search, FileText, Eye, Download, Trash2, X, ImageIcon, Receipt, CreditCard } from "lucide-react"
 import { debounce } from "lodash"
 
 interface FilterParams {
@@ -146,27 +147,71 @@ export function GestionFacturas() {
     })
   }
 
+  const getMetodoPagoColor = (metodo: MetodoPago) => {
+    switch (metodo) {
+      case MetodoPago.EN_EFECTIVO:
+        return "bg-green-100 text-green-800 hover:bg-green-200"
+      case MetodoPago.TRANSFERENCIA:
+        return "bg-blue-100 text-blue-800 hover:bg-blue-200"
+      case MetodoPago.YAPE:
+        return "bg-purple-100 text-purple-800 hover:bg-purple-200"
+      case MetodoPago.PLIN:
+        return "bg-orange-100 text-orange-800 hover:bg-orange-200"
+      case MetodoPago.DEPOSITO:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200"
+      default:
+        return "bg-gray-100 text-gray-800 hover:bg-gray-200"
+    }
+  }
+
+  const getMetodoPagoLabel = (metodo: MetodoPago) => {
+    switch (metodo) {
+      case MetodoPago.EN_EFECTIVO:
+        return "Efectivo"
+      case MetodoPago.TRANSFERENCIA:
+        return "Transferencia"
+      case MetodoPago.YAPE:
+        return "Yape"
+      case MetodoPago.PLIN:
+        return "Plin"
+      case MetodoPago.DEPOSITO:
+        return "Depósito"
+      default:
+        return metodo
+    }
+  }
+
   const columns = [
     {
       key: "id",
       header: "ID",
-      render: (factura: FacturaResponse) => `#${factura.id}`,
+      render: (factura: FacturaResponse) => (
+        <div className="flex flex-col">
+          <span className="font-medium">#{factura.id}</span>
+          {factura.codigoFactura && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Receipt className="h-3 w-3" />
+              {factura.codigoFactura}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: "cliente",
       header: "Cliente",
-      render: (factura: FacturaResponse) => factura.cliente?.usuario?.nombreCompleto ?? "Sin cliente",
-    },
-    {
-      key: "taller",
-      header: "Taller",
-      render: (factura: FacturaResponse) => factura.taller?.nombre ?? "Sin taller",
+      render: (factura: FacturaResponse) => (
+        <div className="min-w-[150px]">
+          <div className="font-medium">{factura.cliente?.usuario?.nombreCompleto ?? "Sin cliente"}</div>
+          <div className="text-sm text-muted-foreground">ID: {factura.cliente?.id ?? "--"}</div>
+        </div>
+      ),
     },
     {
       key: "vehiculo",
       header: "Vehículo",
       render: (factura: FacturaResponse) => (
-        <div>
+        <div className="min-w-[120px]">
           <div className="font-medium">{factura.mantenimiento.vehiculo.placa}</div>
           <div className="text-sm text-muted-foreground">
             {factura.mantenimiento.vehiculo.marca} {factura.mantenimiento.vehiculo.modelo}
@@ -176,29 +221,70 @@ export function GestionFacturas() {
     },
     {
       key: "servicio",
-      header: "Servicio",
-      render: (factura: FacturaResponse) => factura.mantenimiento.servicio.nombre,
+      header: "Servicio & Taller",
+      render: (factura: FacturaResponse) => (
+        <div className="min-w-[150px]">
+          <div className="font-medium">{factura.mantenimiento.servicio.nombre}</div>
+          <div className="text-sm text-muted-foreground">{factura.taller?.nombre ?? "Sin taller"}</div>
+        </div>
+      ),
     },
     {
       key: "fechaEmision",
       header: "Fecha Emisión",
-      render: (factura: FacturaResponse) => formatDate(factura.fechaEmision),
+      render: (factura: FacturaResponse) => <div className="text-sm">{formatDate(factura.fechaEmision)}</div>,
     },
     {
       key: "total",
       header: "Total",
-      render: (factura: FacturaResponse) => <span className="font-medium">{formatCurrency(factura.total)}</span>,
+      render: (factura: FacturaResponse) => (
+        <div className="text-right">
+          <span className="font-bold text-lg">{formatCurrency(factura.total)}</span>
+        </div>
+      ),
     },
     {
       key: "metodoPago",
       header: "Método de Pago",
-      render: (factura: FacturaResponse) => factura.metodoPago,
+      render: (factura: FacturaResponse) => (
+        <div className="min-w-[140px]">
+          <Badge className={`${getMetodoPagoColor(factura.metodoPago)} mb-2`}>
+            <CreditCard className="h-3 w-3 mr-1" />
+            {getMetodoPagoLabel(factura.metodoPago)}
+          </Badge>
+
+          {factura.metodoPago !== MetodoPago.EN_EFECTIVO && (
+            <div className="space-y-1">
+              {factura.nroOperacion && (
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium">Op:</span> {factura.nroOperacion}
+                </div>
+              )}
+              {factura.imagenOperacion && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => {
+                    const getFullImageUrl = (url: string) =>
+                      url.startsWith("http") ? url : `http://localhost:8080${url}`
+                    window.open(getFullImageUrl(factura.imagenOperacion!), "_blank")
+                  }}
+                >
+                  <ImageIcon className="h-3 w-3 mr-1" />
+                  Ver Comprobante
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      ),
     },
   ]
 
   const actions = (factura: FacturaResponse) => (
-    <div className="flex items-center gap-2">
-      <Button variant="ghost" size="sm" onClick={() => handleViewDetails(factura)}>
+    <div className="flex items-center gap-1">
+      <Button variant="ghost" size="sm" onClick={() => handleViewDetails(factura)} title="Ver detalles">
         <Eye className="h-4 w-4" />
       </Button>
       {factura.pdfUrl && (
@@ -209,6 +295,7 @@ export function GestionFacturas() {
             const getFullPdfUrl = (url: string) => (url.startsWith("http") ? url : `http://localhost:8080${url}`)
             window.open(getFullPdfUrl(factura.pdfUrl!), "_blank")
           }}
+          title="Descargar PDF"
         >
           <Download className="h-4 w-4" />
         </Button>
@@ -218,6 +305,7 @@ export function GestionFacturas() {
         size="sm"
         onClick={() => handleDelete(factura.id)}
         className="text-destructive hover:text-destructive"
+        title="Eliminar factura"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
@@ -269,7 +357,7 @@ export function GestionFacturas() {
 
   const additionalData = {
     metodoPago: [
-      { value: "", label: "Todos" },
+      { value: "", label: "Todos los métodos" },
       { value: MetodoPago.EN_EFECTIVO, label: "Efectivo" },
       { value: MetodoPago.TRANSFERENCIA, label: "Transferencia" },
       { value: MetodoPago.YAPE, label: "Yape" },
@@ -299,7 +387,7 @@ export function GestionFacturas() {
           <div className="flex gap-4">
             <div className="flex-1">
               <Input
-                placeholder="Buscar por placa, cliente, taller..."
+                placeholder="Buscar por placa, cliente, taller, código de factura..."
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
               />
@@ -345,65 +433,143 @@ export function GestionFacturas() {
         emptyIcon={FileText}
       />
 
-      {/* Modal de detalles */}
+      {/* Modal de detalles mejorado */}
       {showDetails && selectedFactura && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Detalles de la Factura #{selectedFactura.id}</h3>
+          <div className="bg-white p-6 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-bold">Detalles de la Factura #{selectedFactura.id}</h3>
+                {selectedFactura.codigoFactura && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                    <Receipt className="h-4 w-4" />
+                    Código: {selectedFactura.codigoFactura}
+                  </p>
+                )}
+              </div>
               <Button variant="ghost" size="sm" onClick={() => setShowDetails(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Cliente</p>
-                  <p>{selectedFactura.cliente?.usuario?.nombreCompleto || "--"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Taller</p>
-                  <p>{selectedFactura.taller?.nombre || "--"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Vehículo</p>
-                  <p>{selectedFactura.mantenimiento?.vehiculo?.placa || "--"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Servicio</p>
-                  <p>{selectedFactura.mantenimiento?.servicio?.nombre || "--"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Fecha Emisión</p>
-                  <p>{formatDate(selectedFactura.fechaEmision)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Método de Pago</p>
-                  <p>{selectedFactura.metodoPago || "--"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total</p>
-                  <p className="font-medium">{formatCurrency(selectedFactura.total)}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Detalles</p>
-                <p>{selectedFactura.detalles || "Sin detalles"}</p>
-              </div>
-              {selectedFactura.pdfUrl && (
-                <div className="mt-4">
-                  <Button
-                    onClick={() => {
-                      const getFullPdfUrl = (url: string) =>
-                        url.startsWith("http") ? url : `http://localhost:8080${url}`
-                      window.open(getFullPdfUrl(selectedFactura.pdfUrl!), "_blank")
-                    }}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Descargar PDF
-                  </Button>
-                </div>
-              )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Información del Cliente y Vehículo */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Cliente y Vehículo</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Cliente</p>
+                    <p className="font-medium">{selectedFactura.cliente?.usuario?.nombreCompleto || "--"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Vehículo</p>
+                    <p className="font-medium">{selectedFactura.mantenimiento?.vehiculo?.placa || "--"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedFactura.mantenimiento?.vehiculo?.marca} {selectedFactura.mantenimiento?.vehiculo?.modelo}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Taller</p>
+                    <p>{selectedFactura.taller?.nombre || "--"}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Información del Servicio */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Servicio</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Servicio</p>
+                    <p className="font-medium">{selectedFactura.mantenimiento?.servicio?.nombre || "--"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Fecha Emisión</p>
+                    <p>{formatDate(selectedFactura.fechaEmision)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(selectedFactura.total)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Información de Pago */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Información de Pago</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Método de Pago</p>
+                    <Badge className={`${getMetodoPagoColor(selectedFactura.metodoPago)}`}>
+                      <CreditCard className="h-3 w-3 mr-1" />
+                      {getMetodoPagoLabel(selectedFactura.metodoPago)}
+                    </Badge>
+                  </div>
+
+                  {selectedFactura.metodoPago !== MetodoPago.EN_EFECTIVO && (
+                    <>
+                      {selectedFactura.nroOperacion && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Número de Operación</p>
+                          <p className="font-mono">{selectedFactura.nroOperacion}</p>
+                        </div>
+                      )}
+
+                      {selectedFactura.imagenOperacion && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Comprobante de Pago</p>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              const getFullImageUrl = (url: string) =>
+                                url.startsWith("http") ? url : `http://localhost:8080${url}`
+                              window.open(getFullImageUrl(selectedFactura.imagenOperacion!), "_blank")
+                            }}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Ver Comprobante
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Detalles Adicionales */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Detalles Adicionales</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Observaciones</p>
+                    <p className="text-sm">{selectedFactura.detalles || "Sin observaciones"}</p>
+                  </div>
+
+                  {selectedFactura.pdfUrl && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Documento PDF</p>
+                      <Button
+                        onClick={() => {
+                          const getFullPdfUrl = (url: string) =>
+                            url.startsWith("http") ? url : `http://localhost:8080${url}`
+                          window.open(getFullPdfUrl(selectedFactura.pdfUrl!), "_blank")
+                        }}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Descargar PDF
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
