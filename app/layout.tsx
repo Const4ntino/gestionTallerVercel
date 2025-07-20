@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Gestión de Talleres Mecánicos",
   description: "Sistema integral de gestión para talleres mecánicos",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -20,12 +20,21 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <html lang="es" className="scroll-smooth">
+      <body className={`${inter.className} bg-gray-50 text-gray-900 antialiased`}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <AuthProvider>
             {children}
-            <Toaster />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                style: {
+                  background: "#ffffff",
+                  color: "#1f2937",
+                  border: "1px solid #e5e7eb",
+                },
+              }}
+            />
           </AuthProvider>
         </ThemeProvider>
       </body>
