@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { toast } from "sonner"
 import { facturasApi } from "@/lib/facturas-api"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
@@ -12,13 +11,26 @@ import { DataTable } from "@/components/admin/data-table"
 import type { FacturaResponse, FacturaFilterParams } from "@/types/facturas"
 import { MetodoPago } from "@/types/facturas"
 import type { PageResponse } from "@/types/admin"
-import { MoreHorizontal, FileText, Search, Filter, X, Eye, Download, Trash2 } from "lucide-react"
+import { Search, FileText, Eye, Download, Trash2, X } from "lucide-react"
+import { debounce } from "lodash"
+
+interface FilterParams {
+  search?: string
+  mantenimientoId?: number
+  clienteId?: number
+  tallerId?: number
+  fechaEmisionDesde?: string
+  fechaEmisionHasta?: string
+  minTotal?: number
+  maxTotal?: number
+  metodoPago?: MetodoPago
+}
 
 export function GestionFacturas() {
   const [facturas, setFacturas] = useState<FacturaResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filters, setFilters] = useState<FacturaFilterParams>({})
+  const [currentFilters, setCurrentFilters] = useState<FilterParams>({})
   const [selectedFactura, setSelectedFactura] = useState<FacturaResponse | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [page, setPage] = useState(0)
@@ -26,18 +38,26 @@ export function GestionFacturas() {
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
 
-  const loadFacturas = async () => {
+  // Función debounced para búsqueda automática
+  const debouncedSearch = useCallback(
+    debounce((term: string) => {
+      if (term.length >= 2 || term.length === 0) {
+        setPage(0)
+        loadFacturas(0, size, { ...currentFilters, search: term })
+      }
+    }, 500),
+    [currentFilters, size],
+  )
+
+  const loadFacturas = async (currentPage = page, currentSize = size, filters: FilterParams = {}) => {
     try {
       setLoading(true)
 
-      // Siempre usamos el endpoint de filtrado con paginación del servidor
       const filterParams: FacturaFilterParams = {
         ...filters,
-        search: searchTerm.trim() || undefined,
-        page,
-        size,
-        // Podemos agregar sort si es necesario
-        // sort: "fechaEmision,desc",
+        search: filters.search?.trim() || undefined,
+        page: currentPage,
+        size: currentSize,
       }
 
       const response: PageResponse<FacturaResponse> = await facturasApi.filter(filterParams)
@@ -78,71 +98,48 @@ export function GestionFacturas() {
     }
   }
 
-  const handleSearch = () => {
+  const handleSearch = (term: string) => {
+    setSearchTerm(term)
+    debouncedSearch(term)
+  }
+
+  const handleApplyFilters = (filters: FilterParams) => {
+    setCurrentFilters(filters)
     setPage(0)
-    loadFacturas()
+    loadFacturas(0, size, { ...filters, search: searchTerm })
   }
 
-  const handleFilterChange = (newFilters: any) => {
-    // Convertir valores numéricos de string a number para la API
-    const processedFilters = { ...newFilters }
-    
-    if (processedFilters.minTotal) {
-      processedFilters.minTotal = Number(processedFilters.minTotal)
-    }
-    
-    if (processedFilters.maxTotal) {
-      processedFilters.maxTotal = Number(processedFilters.maxTotal)
-    }
-    
-    if (processedFilters.mantenimientoId) {
-      processedFilters.mantenimientoId = Number(processedFilters.mantenimientoId)
-    }
-    
-    if (processedFilters.clienteId) {
-      processedFilters.clienteId = Number(processedFilters.clienteId)
-    }
-    
-    if (processedFilters.tallerId) {
-      processedFilters.tallerId = Number(processedFilters.tallerId)
-    }
-    
-    setFilters(processedFilters)
-    setPage(0) // Reset to first page when filters change
-    loadFacturas() // Ejecutar la petición con los nuevos filtros
-  }
-
-  const clearFilters = () => {
-    setFilters({})
+  const handleClearFilters = () => {
+    setCurrentFilters({})
     setSearchTerm("")
     setPage(0)
-    loadFacturas() // Ejecutar la petición al limpiar los filtros
+    loadFacturas(0, size, {})
   }
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)
-    loadFacturas()
+    loadFacturas(newPage, size, { ...currentFilters, search: searchTerm })
   }
 
   const handlePageSizeChange = (newSize: number) => {
     setSize(newSize)
-    setPage(0) // Volver a la primera página al cambiar el tamaño
-    loadFacturas()
+    setPage(0)
+    loadFacturas(0, newSize, { ...currentFilters, search: searchTerm })
   }
 
   useEffect(() => {
     loadFacturas()
-  }, [page, size])
+  }, [])
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CO", {
+    return new Intl.NumberFormat("es-PE", {
       style: "currency",
-      currency: "COP",
+      currency: "PEN",
     }).format(amount)
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-CO", {
+    return new Date(dateString).toLocaleDateString("es-PE", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -190,41 +187,42 @@ export function GestionFacturas() {
     {
       key: "total",
       header: "Total",
-      render: (factura: FacturaResponse) => formatCurrency(factura.total),
+      render: (factura: FacturaResponse) => <span className="font-medium">{formatCurrency(factura.total)}</span>,
     },
     {
       key: "metodoPago",
       header: "Método de Pago",
       render: (factura: FacturaResponse) => factura.metodoPago,
     },
-    {
-      key: "acciones",
-      header: "Acciones",
-      render: (factura: FacturaResponse) => (
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => handleViewDetails(factura)}>
-            <Eye className="h-4 w-4" />
-          </Button>
-          {factura.pdfUrl && (
-            <Button variant="ghost" size="sm" onClick={() => {
-              const getFullPdfUrl = (url: string) => url.startsWith('http') ? url : `http://localhost:8080${url}`;
-              window.open(getFullPdfUrl(factura.pdfUrl!), "_blank");
-            }}>
-              <Download className="h-4 w-4" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDelete(factura.id)}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
   ]
+
+  const actions = (factura: FacturaResponse) => (
+    <div className="flex items-center gap-2">
+      <Button variant="ghost" size="sm" onClick={() => handleViewDetails(factura)}>
+        <Eye className="h-4 w-4" />
+      </Button>
+      {factura.pdfUrl && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const getFullPdfUrl = (url: string) => (url.startsWith("http") ? url : `http://localhost:8080${url}`)
+            window.open(getFullPdfUrl(factura.pdfUrl!), "_blank")
+          }}
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => handleDelete(factura.id)}
+        className="text-destructive hover:text-destructive"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  )
 
   const filterFields = [
     {
@@ -232,21 +230,18 @@ export function GestionFacturas() {
       label: "ID Mantenimiento",
       type: "text" as const,
       placeholder: "ID del mantenimiento",
-      inputProps: { type: "number", min: 1 },
     },
     {
       key: "clienteId",
       label: "ID Cliente",
       type: "text" as const,
       placeholder: "ID del cliente",
-      inputProps: { type: "number", min: 1 },
     },
     {
       key: "tallerId",
       label: "ID Taller",
       type: "text" as const,
       placeholder: "ID del taller",
-      inputProps: { type: "number", min: 1 },
     },
     {
       key: "fechaEmisionDesde",
@@ -263,39 +258,25 @@ export function GestionFacturas() {
       label: "Total Mínimo",
       type: "text" as const,
       placeholder: "Monto mínimo",
-      inputProps: { 
-        type: "number", 
-        min: 0, 
-        step: 0.01,
-        className: "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-      },
     },
     {
       key: "maxTotal",
       label: "Total Máximo",
       type: "text" as const,
       placeholder: "Monto máximo",
-      inputProps: { 
-        type: "number", 
-        min: 0, 
-        step: 0.01,
-        className: "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-      },
-    },
-    {
-      key: "metodoPago",
-      label: "Método de Pago",
-      type: "select" as const,
-      options: [
-        { value: "", label: "Todos" },
-        { value: MetodoPago.EN_EFECTIVO, label: "Efectivo" },
-        { value: MetodoPago.TRANSFERENCIA, label: "Transferencia" },
-        { value: MetodoPago.YAPE, label: "Yape" },
-        { value: MetodoPago.PLIN, label: "Plin" },
-        { value: MetodoPago.DEPOSITO, label: "Depósito" },
-      ],
     },
   ]
+
+  const additionalData = {
+    metodoPago: [
+      { value: "", label: "Todos" },
+      { value: MetodoPago.EN_EFECTIVO, label: "Efectivo" },
+      { value: MetodoPago.TRANSFERENCIA, label: "Transferencia" },
+      { value: MetodoPago.YAPE, label: "Yape" },
+      { value: MetodoPago.PLIN, label: "Plin" },
+      { value: MetodoPago.DEPOSITO, label: "Depósito" },
+    ],
+  }
 
   return (
     <div className="space-y-6">
@@ -306,7 +287,7 @@ export function GestionFacturas() {
         </div>
       </div>
 
-      {/* Barra de búsqueda y filtros */}
+      {/* Barra de búsqueda y filtros unificada */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -320,23 +301,26 @@ export function GestionFacturas() {
               <Input
                 placeholder="Buscar por placa, cliente, taller..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                onChange={(e) => handleSearch(e.target.value)}
               />
             </div>
-            <Button onClick={handleSearch}>
+            <Button onClick={() => loadFacturas(0, size, { ...currentFilters, search: searchTerm })}>
               <Search className="h-4 w-4 mr-2" />
               Buscar
             </Button>
-            <AdvancedFilters 
-              filters={filterFields} 
-              onApplyFilters={handleFilterChange} 
-              onClearFilters={clearFilters} 
+            <AdvancedFilters
+              filters={[...filterFields, { key: "metodoPago", label: "Método de Pago", type: "select" as const }]}
+              onApplyFilters={handleApplyFilters}
+              onClearFilters={() => {
+                setCurrentFilters({})
+                loadFacturas(0, size, { search: searchTerm })
+              }}
+              additionalData={additionalData}
             />
-            {(Object.keys(filters).length > 0 || searchTerm) && (
-              <Button variant="outline" onClick={clearFilters}>
+            {(Object.keys(currentFilters).length > 0 || searchTerm) && (
+              <Button variant="outline" onClick={handleClearFilters}>
                 <X className="h-4 w-4 mr-2" />
-                Limpiar
+                Limpiar Todo
               </Button>
             )}
           </div>
@@ -354,13 +338,11 @@ export function GestionFacturas() {
         onPageSizeChange={handlePageSizeChange}
         pageSize={size}
         isLoading={loading}
+        actions={actions}
         showDetails={true}
         onViewDetails={handleViewDetails}
-        onSearch={(term) => {
-          setSearchTerm(term)
-          setPage(0)
-          loadFacturas()
-        }}
+        emptyMessage="No se encontraron facturas"
+        emptyIcon={FileText}
       />
 
       {/* Modal de detalles */}
@@ -396,6 +378,10 @@ export function GestionFacturas() {
                   <p>{formatDate(selectedFactura.fechaEmision)}</p>
                 </div>
                 <div>
+                  <p className="text-sm font-medium text-muted-foreground">Método de Pago</p>
+                  <p>{selectedFactura.metodoPago || "--"}</p>
+                </div>
+                <div>
                   <p className="text-sm font-medium text-muted-foreground">Total</p>
                   <p className="font-medium">{formatCurrency(selectedFactura.total)}</p>
                 </div>
@@ -406,10 +392,11 @@ export function GestionFacturas() {
               </div>
               {selectedFactura.pdfUrl && (
                 <div className="mt-4">
-                  <Button 
+                  <Button
                     onClick={() => {
-                      const getFullPdfUrl = (url: string) => url.startsWith('http') ? url : `http://localhost:8080${url}`;
-                      window.open(getFullPdfUrl(selectedFactura.pdfUrl!), "_blank");
+                      const getFullPdfUrl = (url: string) =>
+                        url.startsWith("http") ? url : `http://localhost:8080${url}`
+                      window.open(getFullPdfUrl(selectedFactura.pdfUrl!), "_blank")
                     }}
                   >
                     <Download className="h-4 w-4 mr-2" />
