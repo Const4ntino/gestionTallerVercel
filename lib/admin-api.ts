@@ -114,6 +114,22 @@ export const usuariosApi = {
     if (!response.ok) throw new Error("Error al filtrar usuarios")
     return response.json()
   },
+  
+  getTrabajadoresNoAsignados: async (): Promise<UsuarioResponse[]> => {
+    const response = await fetch(`${API_BASE_URL}/api/usuarios/trabajadores-no-asignados`, {
+      headers: getAuthHeaders(),
+    })
+    if (!response.ok) throw new Error("Error al obtener trabajadores no asignados")
+    return response.json()
+  },
+  
+  getClientesNoAsignados: async (): Promise<UsuarioResponse[]> => {
+    const response = await fetch(`${API_BASE_URL}/api/usuarios/clientes-no-asignados`, {
+      headers: getAuthHeaders(),
+    })
+    if (!response.ok) throw new Error("Error al obtener clientes no asignados")
+    return response.json()
+  },
 }
 
 // ===== TRABAJADORES API =====

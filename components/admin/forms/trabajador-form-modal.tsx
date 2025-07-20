@@ -59,16 +59,24 @@ export function TrabajadorFormModal({ open, onOpenChange, trabajador, onSuccess 
   const loadData = async () => {
     try {
       const [usuariosResponse, talleresResponse] = await Promise.all([
-        usuariosApi.filter({ rol: "TRABAJADOR", size: 100 }),
+        usuariosApi.getTrabajadoresNoAsignados(),
         talleresApi.getAll(),
       ])
 
-      // Filtrar usuarios que no tienen trabajador asignado
-      const usuariosSinTrabajador = usuariosResponse.content.filter(
-        (usuario) => !trabajador || usuario.id === trabajador.usuario.id,
-      )
+      // Si estamos editando, asegurarse de incluir el usuario actual
+      let usuariosFiltrados = [...usuariosResponse];
+      
+      if (trabajador && !usuariosResponse.some(u => u.id === trabajador.usuario.id)) {
+        // Obtener el usuario actual si no está en la lista
+        try {
+          const usuarioActual = await usuariosApi.getById(trabajador.usuario.id);
+          usuariosFiltrados.push(usuarioActual);
+        } catch (err) {
+          console.error("Error al obtener el usuario actual:", err);
+        }
+      }
 
-      setUsuarios(usuariosSinTrabajador)
+      setUsuarios(usuariosFiltrados)
       setTalleres(talleresResponse)
     } catch (error) {
       console.error("Error al cargar datos:", error)

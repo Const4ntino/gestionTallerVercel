@@ -61,20 +61,30 @@ export function ClienteFormModal({ open, onOpenChange, cliente, onSuccess }: Cli
 
   const loadData = async () => {
     try {
-      const [usuariosResponse, talleresResponse] = await Promise.all([
-        usuariosApi.filter({ rol: "CLIENTE", size: 100 }),
+      const [usuariosNoAsignados, talleresResponse] = await Promise.all([
+        usuariosApi.getClientesNoAsignados(),
         talleresApi.getAll(),
       ])
 
-      // Filtrar usuarios que no tienen cliente asignado o es el cliente actual
-      let usuariosSinCliente = usuariosResponse.content
+      let usuariosDisponibles = usuariosNoAsignados
 
-      // Si estamos editando, incluir el usuario actual
-      if (cliente) {
-        usuariosSinCliente = usuariosResponse.content.filter((usuario) => usuario.id === cliente.usuario?.id)
+      // Si estamos editando, asegurarse de incluir el usuario actual
+      if (cliente && cliente.usuario) {
+        // Verificar si el usuario actual ya está en la lista
+        const usuarioActualIncluido = usuariosNoAsignados.some(u => u.id === cliente.usuario?.id)
+        
+        // Si no está incluido, obtenerlo y añadirlo a la lista
+        if (!usuarioActualIncluido) {
+          try {
+            const usuarioActual = await usuariosApi.getById(cliente.usuario.id)
+            usuariosDisponibles = [usuarioActual, ...usuariosNoAsignados]
+          } catch (err) {
+            console.error("Error al obtener el usuario actual:", err)
+          }
+        }
       }
 
-      setUsuarios(usuariosSinCliente)
+      setUsuarios(usuariosDisponibles)
       setTalleres(talleresResponse)
     } catch (error) {
       console.error("Error al cargar datos:", error)
