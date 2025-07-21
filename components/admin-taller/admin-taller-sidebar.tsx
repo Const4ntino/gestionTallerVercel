@@ -6,7 +6,16 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { LayoutDashboard, Wrench, LogOut } from "lucide-react"
+import { 
+  LayoutDashboard, 
+  Wrench, 
+  LogOut, 
+  Users, 
+  UserCheck, 
+  Car, 
+  FileText, 
+  Package 
+} from "lucide-react"
 
 const menuItems = [
   {
@@ -15,9 +24,34 @@ const menuItems = [
     icon: LayoutDashboard,
   },
   {
+    title: "Usuarios",
+    href: "/admin-taller/usuarios",
+    icon: Users,
+  },
+  {
+    title: "Clientes",
+    href: "/admin-taller/clientes",
+    icon: UserCheck,
+  },
+  {
+    title: "Vehículos",
+    href: "/admin-taller/vehiculos",
+    icon: Car,
+  },
+  {
     title: "Mantenimientos",
     href: "/admin-taller/mantenimientos",
     icon: Wrench,
+  },
+  {
+    title: "Facturas",
+    href: "/admin-taller/facturas",
+    icon: FileText,
+  },
+  {
+    title: "Productos",
+    href: "/admin-taller/productos",
+    icon: Package,
   },
 ]
 
