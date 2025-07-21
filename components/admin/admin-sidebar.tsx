@@ -19,67 +19,83 @@ import {
   Building,
   LogOut,
 } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
-const menuItems = [
+const allMenuItems = [
   {
     title: "Dashboard",
     href: "/admin",
     icon: LayoutDashboard,
+    roles: ["ADMINISTRADOR"], // Solo visible para ADMINISTRADOR
   },
   {
     title: "Mi Empresa",
     href: "/admin/empresa",
     icon: Building,
+    roles: ["ADMINISTRADOR"], // Solo visible para ADMINISTRADOR
   },
   {
     title: "Usuarios",
     href: "/admin/usuarios",
     icon: Users,
+    roles: ["ADMINISTRADOR", "ADMINISTRADOR_TALLER"], // Visible para ambos
   },
   {
     title: "Clientes",
     href: "/admin/clientes",
     icon: UserCheck,
+    roles: ["ADMINISTRADOR", "ADMINISTRADOR_TALLER"], // Visible para ambos
   },
   {
     title: "Trabajadores",
     href: "/admin/trabajadores",
     icon: UserCheck,
+    roles: ["ADMINISTRADOR"], // Solo visible para ADMINISTRADOR
   },
   {
     title: "Talleres",
     href: "/admin/talleres",
     icon: Building2,
+    roles: ["ADMINISTRADOR"], // Solo visible para ADMINISTRADOR
   },
   {
     title: "Vehículos",
     href: "/admin/vehiculos",
     icon: Car,
+    roles: ["ADMINISTRADOR", "ADMINISTRADOR_TALLER"], // Visible para ambos
   },
   {
     title: "Mantenimientos",
     href: "/admin/mantenimientos",
     icon: Wrench,
+    roles: ["ADMINISTRADOR", "ADMINISTRADOR_TALLER"], // Visible para ambos
   },
   {
     title: "Facturas",
     href: "/admin/facturas",
     icon: FileText,
+    roles: ["ADMINISTRADOR", "ADMINISTRADOR_TALLER"], // Visible para ambos
   },
   {
     title: "Productos",
     href: "/admin/productos",
     icon: Package,
+    roles: ["ADMINISTRADOR", "ADMINISTRADOR_TALLER"], // Visible para ambos
   },
   {
     title: "Servicios",
     href: "/admin/servicios",
     icon: Settings,
+    roles: ["ADMINISTRADOR"], // Solo visible para ADMINISTRADOR
   },
 ]
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const { user } = useAuth()
+
+  // Filtrar los elementos del menú según el rol del usuario
+  const menuItems = allMenuItems.filter((item) => item.roles.includes(user?.rol || ""))
 
   const handleLogout = () => {
     localStorage.removeItem("token")
@@ -90,7 +106,9 @@ export function AdminSidebar() {
   return (
     <div className="flex h-full w-64 flex-col bg-background border-r">
       <div className="flex h-14 items-center border-b px-4">
-        <h2 className="text-lg font-semibold">Panel Admin</h2>
+        <h2 className="text-lg font-semibold">
+          {user?.rol === "ADMINISTRADOR_TALLER" ? "Panel Taller" : "Panel Admin"}
+        </h2>
       </div>
 
       <ScrollArea className="flex-1 px-3">
