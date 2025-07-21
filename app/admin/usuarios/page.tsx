@@ -13,6 +13,7 @@ import { UsuarioFormModal } from "@/components/admin/forms/usuario-form-modal"
 import { AdvancedFilters } from "@/components/admin/advanced-filters"
 import type { FilterParams } from "@/types/utils"
 import { DetailsModal } from "@/components/admin/details-modal"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([])
@@ -25,6 +26,9 @@ export default function UsuariosPage() {
   const [currentFilters, setCurrentFilters] = useState<FilterParams>({})
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [selectedUsuarioDetails, setSelectedUsuarioDetails] = useState<UsuarioResponse | null>(null)
+  
+  // Obtener el rol del usuario actual
+  const { user } = useAuth()
 
   const userFilters = [
     { key: "search", label: "Búsqueda General", type: "text" as const },
@@ -141,28 +145,39 @@ export default function UsuariosPage() {
     },
   ]
 
-  const actions = (usuario: UsuarioResponse) => (
-    <div className="flex gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          setSelectedUsuario(usuario)
-          setModalOpen(true)
-        }}
-      >
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button 
-        variant="outline" 
-        size="sm" 
-        disabled={true} 
-        title="La eliminación de usuarios está deshabilitada"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  )
+  const actions = (usuario: UsuarioResponse) => {
+    // Determinar si el botón de edición debe estar deshabilitado
+    // Un ADMINISTRADOR_TALLER solo puede editar usuarios con rol CLIENTE
+    const isAdminTaller = user?.rol === "ADMINISTRADOR_TALLER"
+    const canEdit = !isAdminTaller || usuario.rol === "CLIENTE"
+    
+    return (
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!canEdit}
+          onClick={() => {
+            if (canEdit) {
+              setSelectedUsuario(usuario)
+              setModalOpen(true)
+            }
+          }}
+          title={!canEdit ? "No tienes permisos para editar este usuario" : "Editar usuario"}
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          disabled={true} 
+          title="La eliminación de usuarios está deshabilitada"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    )
+  }
 
   const handleApplyFilters = (filters: FilterParams) => {
     setCurrentFilters(filters)

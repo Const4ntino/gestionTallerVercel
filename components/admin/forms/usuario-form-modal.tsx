@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,6 +24,7 @@ import type {
   UsuarioClienteRequest,
   UsuarioTrabajadorRequest,
   TallerResponse,
+  TrabajadorRequest,
 } from "@/types/admin"
 import { toast } from "sonner"
 
@@ -209,6 +211,17 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  // Importar el contexto de autenticación para obtener el rol del usuario actual
+  const { user } = useAuth()
+  const isAdminTaller = user?.rol === "ADMINISTRADOR_TALLER"
+  
+  // Si el usuario es ADMINISTRADOR_TALLER, forzar a que solo pueda crear clientes
+  useEffect(() => {
+    if (isAdminTaller && !usuario) {
+      setFormData(prev => ({ ...prev, rol: "CLIENTE" }))
+    }
+  }, [isAdminTaller, usuario])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
@@ -286,12 +299,18 @@ export function UsuarioFormModal({ open, onOpenChange, usuario, onSuccess }: Usu
                 <SelectValue placeholder="Selecciona un rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ADMINISTRADOR">Administrador</SelectItem>
-                <SelectItem value="ADMINISTRADOR_TALLER">Administrador de Taller</SelectItem>
-                <SelectItem value="TRABAJADOR">Trabajador</SelectItem>
+                {/* Solo mostrar CLIENTE si es ADMINISTRADOR_TALLER, o mostrar todos si es ADMINISTRADOR */}
+                {!isAdminTaller && <SelectItem value="ADMINISTRADOR">Administrador</SelectItem>}
+                {!isAdminTaller && <SelectItem value="ADMINISTRADOR_TALLER">Administrador de Taller</SelectItem>}
+                {!isAdminTaller && <SelectItem value="TRABAJADOR">Trabajador</SelectItem>}
                 <SelectItem value="CLIENTE">Cliente</SelectItem>
               </SelectContent>
             </Select>
+            {isAdminTaller && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Como Administrador de Taller, solo puede crear usuarios con rol Cliente.
+              </p>
+            )}
           </div>
 
           {/* Campos adicionales para CLIENTE */}
