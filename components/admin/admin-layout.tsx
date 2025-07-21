@@ -16,8 +16,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && (!user || user.rol !== "ADMINISTRADOR")) {
-      router.push("/login")
+    if (!isLoading) {
+      if (!user) {
+        router.push("/login")
+      } else if (user.rol !== "ADMINISTRADOR" && user.rol !== "ADMINISTRADOR_TALLER") {
+        router.push("/login")
+      }
     }
   }, [user, isLoading, router])
 
@@ -29,7 +33,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     )
   }
 
-  if (!user || user.rol !== "ADMINISTRADOR") {
+  if (!user || (user.rol !== "ADMINISTRADOR" && user.rol !== "ADMINISTRADOR_TALLER")) {
     return null
   }
 
