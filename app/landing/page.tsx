@@ -249,7 +249,7 @@ export default function LandingPage() {
               size="lg"
               variant="outline"
               onClick={() => router.push("/login")}
-              className="text-lg px-8 py-3 border-white text-white hover:bg-white/10"
+              className="text-lg px-8 py-3 border-white text-black hover:bg-white/10 hover:text-white"
             >
               Ya tengo cuenta
             </Button>
