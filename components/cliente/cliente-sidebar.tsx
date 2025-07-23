@@ -72,15 +72,17 @@ function SidebarContent() {
         </div>
       </ScrollArea>
 
-      <div className="border-t p-4">
-        <div className="mb-3 text-sm">
-          <p className="font-medium">{user?.nombreCompleto}</p>
-          <p className="text-muted-foreground">CLIENTE</p>
+      <div className="mt-auto">
+        <div className="border-t p-4">
+          <div className="mb-3 text-sm">
+            <p className="font-medium">{user?.username}</p>
+            <p className="text-muted-foreground">CLIENTE</p>
+          </div>
+          <Button variant="destructive" className="w-full justify-start" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Cerrar Sesión
+          </Button>
         </div>
-        <Button variant="outline" className="w-full justify-start bg-transparent" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Cerrar Sesión
-        </Button>
       </div>
     </div>
   )
@@ -103,8 +105,8 @@ export function ClienteSidebar() {
       </Sheet>
 
       {/* Desktop sidebar */}
-      <div className="hidden border-r bg-muted/40 md:block">
-        <div className="flex h-full max-h-screen flex-col gap-2">
+      <div className="hidden border-r bg-muted/40 md:block h-full w-64">
+        <div className="flex h-full flex-col">
           <SidebarContent />
         </div>
       </div>

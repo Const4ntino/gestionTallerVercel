@@ -20,16 +20,24 @@ export default function AlertasPage() {
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [filtros, setFiltros] = useState<AlertasFiltros>({
-    estado: "NUEVA,VISTA", // Por defecto no mostrar resueltas
+    estado: "NUEVA", // Por defecto mostrar nuevas
     page: 0,
     size: 10,
     sort: "fechaCreacion,desc",
   })
   const [totalElements, setTotalElements] = useState(0)
-  const [currentTab, setCurrentTab] = useState("todas")
+  const [currentTab, setCurrentTab] = useState("nuevas")
+  
+  // Contadores para cada tipo de alerta
+  const [contadores, setContadores] = useState({
+    nuevas: 0,
+    vistas: 0
+  })
 
   useEffect(() => {
     cargarVehiculos()
+    // Cargar contadores iniciales
+    cargarContadores()
   }, [])
 
   useEffect(() => {
@@ -38,19 +46,55 @@ export default function AlertasPage() {
 
   const cargarVehiculos = async () => {
     try {
-      const response = await obtenerVehiculosCliente()
+      const response = await obtenerVehiculosCliente({})
       setVehiculos(response.content)
     } catch (error) {
       console.error("Error al cargar vehículos:", error)
     }
   }
 
+  // Función para cargar los contadores de alertas por estado
+  const cargarContadores = async () => {
+    try {
+      // Cargar conteo de alertas nuevas
+      const responseNuevas = await obtenerMisAlertas({
+        estado: "NUEVA",
+        page: 0,
+        size: 1,
+        sort: "fechaCreacion,desc"
+      })
+      
+      // Cargar conteo de alertas vistas
+      const responseVistas = await obtenerMisAlertas({
+        estado: "VISTA",
+        page: 0,
+        size: 1,
+        sort: "fechaCreacion,desc"
+      })
+      
+      // Actualizar contadores
+      setContadores({
+        nuevas: responseNuevas.totalElements,
+        vistas: responseVistas.totalElements
+      })
+    } catch (error) {
+      console.error("Error al cargar contadores:", error)
+    }
+  }
+  
   const cargarAlertas = async () => {
     try {
       setLoading(true)
       const response = await obtenerMisAlertas(filtros)
       setAlertas(response.content)
       setTotalElements(response.totalElements)
+      
+      // Actualizar el contador correspondiente al estado actual
+      if (filtros.estado === "NUEVA") {
+        setContadores(prev => ({ ...prev, nuevas: response.totalElements }))
+      } else if (filtros.estado === "VISTA") {
+        setContadores(prev => ({ ...prev, vistas: response.totalElements }))
+      }
     } catch (error) {
       console.error("Error al cargar alertas:", error)
       toast.error("Error al cargar las alertas")
@@ -63,7 +107,9 @@ export default function AlertasPage() {
     try {
       await marcarAlertaComoVista(alertaId)
       toast.success("Alerta marcada como leída")
+      // Recargar alertas y actualizar contadores
       cargarAlertas()
+      cargarContadores()
     } catch (error) {
       console.error("Error al marcar alerta como vista:", error)
       toast.error("Error al marcar la alerta como leída")
@@ -74,7 +120,9 @@ export default function AlertasPage() {
     try {
       await marcarAlertaComoResuelta(alertaId)
       toast.success("Alerta archivada correctamente")
+      // Recargar alertas y actualizar contadores
       cargarAlertas()
+      cargarContadores()
     } catch (error) {
       console.error("Error al marcar alerta como resuelta:", error)
       toast.error("Error al archivar la alerta")
@@ -90,11 +138,8 @@ export default function AlertasPage() {
         nuevoEstado = "NUEVA"
         break
       case "vistas":
-        nuevoEstado = "VISTA"
-        break
-      case "todas":
       default:
-        nuevoEstado = "NUEVA,VISTA"
+        nuevoEstado = "VISTA"
         break
     }
 
@@ -111,16 +156,16 @@ export default function AlertasPage() {
 
   const limpiarFiltros = () => {
     setFiltros({
-      estado: "NUEVA,VISTA",
+      estado: "NUEVA",
       page: 0,
       size: 10,
       sort: "fechaCreacion,desc",
     })
-    setCurrentTab("todas")
+    setCurrentTab("nuevas")
   }
 
-  const alertasNuevas = alertas.filter((a) => a.estado === "NUEVA").length
-  const alertasVistas = alertas.filter((a) => a.estado === "VISTA").length
+  // Usamos los contadores independientes en lugar de filtrar las alertas cargadas
+  const { nuevas: alertasNuevas, vistas: alertasVistas } = contadores
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -199,11 +244,7 @@ export default function AlertasPage() {
 
       {/* Tabs por estado */}
       <Tabs value={currentTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="todas" className="flex items-center gap-2">
-            Todas
-            <Badge variant="secondary">{totalElements}</Badge>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="nuevas" className="flex items-center gap-2">
             Nuevas
             <Badge variant="destructive">{alertasNuevas}</Badge>
@@ -227,9 +268,7 @@ export default function AlertasPage() {
                 <p className="text-muted-foreground text-center">
                   {currentTab === "nuevas"
                     ? "No tienes alertas nuevas en este momento."
-                    : currentTab === "vistas"
-                      ? "No tienes alertas leídas."
-                      : "No tienes alertas pendientes en este momento."}
+                    : "No tienes alertas leídas."}
                 </p>
               </CardContent>
             </Card>

@@ -49,13 +49,13 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="space-y-1">
+    <Card className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-sm shadow-xl border-blue-200">
+      <CardHeader className="space-y-1 bg-blue-600 text-white rounded-t-lg">
         <CardTitle className="text-2xl font-bold text-center">Iniciar Sesión</CardTitle>
-        <CardDescription className="text-center">Ingresa tus credenciales para acceder al sistema</CardDescription>
+        <CardDescription className="text-center text-blue-100">Ingresa tus credenciales para acceder al sistema</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -63,9 +63,9 @@ export function LoginForm() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="username">Usuario</Label>
+            <Label htmlFor="username" className="text-blue-800 font-medium">Usuario</Label>
             <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <User className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
               <Input
                 id="username"
                 name="username"
@@ -73,16 +73,16 @@ export function LoginForm() {
                 placeholder="Ingresa tu usuario"
                 value={formData.username}
                 onChange={handleChange}
-                className="pl-10"
+                className="pl-10 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <Label htmlFor="password" className="text-blue-800 font-medium">Contraseña</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
               <Input
                 id="password"
                 name="password"
@@ -90,15 +90,19 @@ export function LoginForm() {
                 placeholder="Ingresa tu contraseña"
                 value={formData.password}
                 onChange={handleChange}
-                className="pl-10"
+                className="pl-10 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
               />
             </div>
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
+        <CardFooter className="flex flex-col space-y-4 pb-6">
+          <Button 
+            type="submit" 
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+            disabled={isLoading}
+          >
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -109,11 +113,11 @@ export function LoginForm() {
             )}
           </Button>
 
-          <p className="text-sm text-center text-muted-foreground">
+          <p className="text-sm text-center text-blue-800">
             ¿No tienes cuenta?{" "}
             <Button
               variant="link"
-              className="p-0 h-auto font-semibold"
+              className="p-0 h-auto font-semibold text-blue-600 hover:text-blue-800"
               onClick={() => router.push("/register")}
               type="button"
             >

@@ -38,10 +38,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="grid h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <AdminSidebar />
-      <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+    <div className="flex h-screen w-full overflow-hidden">
+      <div className="h-screen sticky top-0">
+        <AdminSidebar />
+      </div>
+      <div className="flex flex-1 flex-col overflow-auto">
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
           <div className="w-full flex-1">
             <h1 className="text-lg font-semibold md:text-2xl">Sistema de Gestión de Talleres</h1>
           </div>

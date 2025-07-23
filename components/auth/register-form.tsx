@@ -95,13 +95,13 @@ export function RegisterForm() {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="space-y-1">
+    <Card className="w-full max-w-md mx-auto bg-white/90 backdrop-blur-sm shadow-xl border-blue-200">
+      <CardHeader className="space-y-1 bg-blue-600 text-white rounded-t-lg">
         <CardTitle className="text-2xl font-bold text-center">Crear Cuenta</CardTitle>
-        <CardDescription className="text-center">Completa el formulario para registrarte en el sistema</CardDescription>
+        <CardDescription className="text-center text-blue-100">Completa el formulario para registrarte en el sistema</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -109,9 +109,9 @@ export function RegisterForm() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="nombreCompleto">Nombre Completo</Label>
+            <Label htmlFor="nombreCompleto" className="text-blue-800 font-medium">Nombre Completo</Label>
             <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <User className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
               <Input
                 id="nombreCompleto"
                 name="nombreCompleto"
@@ -119,16 +119,16 @@ export function RegisterForm() {
                 placeholder="Ingresa tu nombre completo"
                 value={formData.nombreCompleto}
                 onChange={handleChange}
-                className="pl-10"
+                className="pl-10 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dni">DNI</Label>
+            <Label htmlFor="dni" className="text-blue-800 font-medium">DNI</Label>
             <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <User className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
               <Input
                 id="dni"
                 name="dni"
@@ -136,7 +136,7 @@ export function RegisterForm() {
                 placeholder="Ingresa tu DNI (8 dígitos)"
                 value={formData.dni}
                 onChange={handleChange}
-                className="pl-10"
+                className="pl-10 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 maxLength={8}
                 inputMode="numeric"
               />
@@ -144,9 +144,9 @@ export function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="correo">Correo Electrónico</Label>
+            <Label htmlFor="correo" className="text-blue-800 font-medium">Correo Electrónico</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Mail className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
               <Input
                 id="correo"
                 name="correo"
@@ -154,16 +154,16 @@ export function RegisterForm() {
                 placeholder="correo@ejemplo.com"
                 value={formData.correo}
                 onChange={handleChange}
-                className="pl-10"
+                className="pl-10 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="username">Usuario</Label>
+            <Label htmlFor="username" className="text-blue-800 font-medium">Usuario</Label>
             <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <User className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
               <Input
                 id="username"
                 name="username"
@@ -171,16 +171,16 @@ export function RegisterForm() {
                 placeholder="Elige un nombre de usuario"
                 value={formData.username}
                 onChange={handleChange}
-                className="pl-10"
+                className="pl-10 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="contrasena">Contraseña</Label>
+            <Label htmlFor="contrasena" className="text-blue-800 font-medium">Contraseña</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
               <Input
                 id="contrasena"
                 name="contrasena"
@@ -188,16 +188,16 @@ export function RegisterForm() {
                 placeholder="Crea una contraseña segura"
                 value={formData.contrasena}
                 onChange={handleChange}
-                className="pl-10"
+                className="pl-10 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="telefono">Teléfono</Label>
+            <Label htmlFor="telefono" className="text-blue-800 font-medium">Teléfono</Label>
             <div className="relative">
-              <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Phone className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
               <Input
                 id="telefono"
                 name="telefono"
@@ -205,7 +205,7 @@ export function RegisterForm() {
                 placeholder="Número de teléfono (9 dígitos)"
                 value={formData.telefono}
                 onChange={handleChange}
-                className="pl-10"
+                className="pl-10 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
                 maxLength={9}
                 minLength={9}
@@ -216,9 +216,9 @@ export function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="direccion">Dirección</Label>
+            <Label htmlFor="direccion" className="text-blue-800 font-medium">Dirección</Label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <MapPin className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
               <Input
                 id="direccion"
                 name="direccion"
@@ -226,15 +226,18 @@ export function RegisterForm() {
                 placeholder="Tu dirección"
                 value={formData.direccion}
                 onChange={handleChange}
-                className="pl-10"
+                className="pl-10 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 required
               />
             </div>
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
+        <CardFooter className="flex flex-col space-y-4 pb-6">
+          <Button 
+            type="submit" 
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+            disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -245,11 +248,11 @@ export function RegisterForm() {
             )}
           </Button>
 
-          <p className="text-sm text-center text-muted-foreground">
+          <p className="text-sm text-center text-blue-800">
             ¿Ya tienes cuenta?{" "}
             <Button
               variant="link"
-              className="p-0 h-auto font-semibold"
+              className="p-0 h-auto font-semibold text-blue-600 hover:text-blue-800"
               onClick={() => router.push("/login")}
               type="button"
             >

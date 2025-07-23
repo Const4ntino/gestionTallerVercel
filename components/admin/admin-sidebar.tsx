@@ -134,17 +134,18 @@ export function AdminSidebar() {
         </div>
       </ScrollArea>
 
-      <Separator />
-
-      <div className="p-4">
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-destructive hover:text-destructive"
-          onClick={handleLogout}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Cerrar Sesión
-        </Button>
+      <div className="mt-auto">
+        <Separator />
+        <div className="p-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-destructive hover:text-destructive"
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Cerrar Sesión
+          </Button>
+        </div>
       </div>
     </div>
   )
