@@ -79,3 +79,24 @@ export async function marcarAlertaComoResuelta(alertaId: number): Promise<void> 
     throw new Error(`Error al marcar alerta como resuelta: ${response.status}`)
   }
 }
+
+export async function contarAlertasNuevas(): Promise<number> {
+  const token = localStorage.getItem("token")
+  if (!token) {
+    throw new Error("No hay token de autenticación")
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/alertas/mis-alertas/nuevas/count`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`Error al obtener conteo de alertas nuevas: ${response.status}`)
+  }
+
+  return response.json()
+}

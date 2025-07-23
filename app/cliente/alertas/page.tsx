@@ -14,11 +14,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Search, Filter, Bell, BellOff } from "lucide-react"
 import { toast } from "sonner"
+import { useAlertas } from "@/contexts/alertas-context"
 
 export default function AlertasPage() {
+  const [activeTab, setActiveTab] = useState<string>("nuevas")
   const [alertas, setAlertas] = useState<AlertaResponse[]>([])
   const [vehiculos, setVehiculos] = useState<VehiculoResponse[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [contadores, setContadores] = useState<{ nuevas: number; vistas: number }>({ nuevas: 0, vistas: 0 })
   const [filtros, setFiltros] = useState<AlertasFiltros>({
     estado: "NUEVA", // Por defecto mostrar nuevas
     page: 0,
@@ -26,13 +29,7 @@ export default function AlertasPage() {
     sort: "fechaCreacion,desc",
   })
   const [totalElements, setTotalElements] = useState(0)
-  const [currentTab, setCurrentTab] = useState("nuevas")
-  
-  // Contadores para cada tipo de alerta
-  const [contadores, setContadores] = useState({
-    nuevas: 0,
-    vistas: 0
-  })
+  const { actualizarContadorAlertas } = useAlertas()
 
   useEffect(() => {
     cargarVehiculos()
@@ -103,34 +100,36 @@ export default function AlertasPage() {
     }
   }
 
-  const handleMarcarVista = async (alertaId: number) => {
+  const marcarComoVista = async (alertaId: number) => {
     try {
       await marcarAlertaComoVista(alertaId)
-      toast.success("Alerta marcada como leída")
-      // Recargar alertas y actualizar contadores
+      // Actualizar la lista de alertas
       cargarAlertas()
+      // Actualizar los contadores
       cargarContadores()
+      // Actualizar el contador en el contexto para el badge del sidebar
+      actualizarContadorAlertas()
     } catch (error) {
-      console.error("Error al marcar alerta como vista:", error)
-      toast.error("Error al marcar la alerta como leída")
+      console.error("Error al marcar como vista:", error)
     }
   }
 
-  const handleMarcarResuelta = async (alertaId: number) => {
+  const marcarComoResuelta = async (alertaId: number) => {
     try {
       await marcarAlertaComoResuelta(alertaId)
-      toast.success("Alerta archivada correctamente")
-      // Recargar alertas y actualizar contadores
+      // Actualizar la lista de alertas
       cargarAlertas()
+      // Actualizar los contadores
       cargarContadores()
+      // Actualizar el contador en el contexto para el badge del sidebar
+      actualizarContadorAlertas()
     } catch (error) {
-      console.error("Error al marcar alerta como resuelta:", error)
-      toast.error("Error al archivar la alerta")
+      console.error("Error al marcar como resuelta:", error)
     }
   }
 
   const handleTabChange = (value: string) => {
-    setCurrentTab(value)
+    setActiveTab(value)
     let nuevoEstado = ""
 
     switch (value) {
@@ -161,7 +160,7 @@ export default function AlertasPage() {
       size: 10,
       sort: "fechaCreacion,desc",
     })
-    setCurrentTab("nuevas")
+    setActiveTab("nuevas")
   }
 
   // Usamos los contadores independientes en lugar de filtrar las alertas cargadas
@@ -243,19 +242,19 @@ export default function AlertasPage() {
       </Card>
 
       {/* Tabs por estado */}
-      <Tabs value={currentTab} onValueChange={handleTabChange}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="nuevas" className="flex items-center gap-2">
             Nuevas
-            <Badge variant="destructive">{alertasNuevas}</Badge>
+            <Badge variant="destructive">{contadores.nuevas}</Badge>
           </TabsTrigger>
           <TabsTrigger value="vistas" className="flex items-center gap-2">
             Leídas
-            <Badge variant="secondary">{alertasVistas}</Badge>
+            <Badge variant="secondary">{contadores.vistas}</Badge>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={currentTab} className="mt-6">
+        <TabsContent value={activeTab} className="mt-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -266,7 +265,7 @@ export default function AlertasPage() {
                 <BellOff className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">No tienes notificaciones</h3>
                 <p className="text-muted-foreground text-center">
-                  {currentTab === "nuevas"
+                  {activeTab === "nuevas"
                     ? "No tienes alertas nuevas en este momento."
                     : "No tienes alertas leídas."}
                 </p>
@@ -278,8 +277,8 @@ export default function AlertasPage() {
                 <AlertaCard
                   key={alerta.id}
                   alerta={alerta}
-                  onMarcarVista={handleMarcarVista}
-                  onMarcarResuelta={handleMarcarResuelta}
+                  onMarcarVista={marcarComoVista}
+                  onMarcarResuelta={marcarComoResuelta}
                 />
               ))}
             </div>

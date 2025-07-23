@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/auth-context"
+import { useAlertas } from "@/contexts/alertas-context"
 import { Car, FileText, Receipt, User, LogOut, Menu, Bell } from "lucide-react"
 
 const navigation = [
@@ -40,6 +42,7 @@ const navigation = [
 function SidebarContent() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
+  const { alertasNuevas } = useAlertas()
   const router = useRouter()
 
   const handleLogout = () => {
@@ -65,6 +68,11 @@ function SidebarContent() {
                 >
                   <item.icon className="mr-2 h-4 w-4" />
                   {item.name}
+                  {item.name === "Mis Alertas" && alertasNuevas > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {alertasNuevas}
+                    </Badge>
+                  )}
                 </Button>
               </Link>
             )
