@@ -71,6 +71,11 @@ export function FacturaFormModal({
   const [imagenOperacion, setImagenOperacion] = useState<File | null>(null)
   const [imagenPreview, setImagenPreview] = useState<string | null>(null)
   
+  // Estados para los nuevos campos solicitados
+  const [conIgv, setConIgv] = useState<boolean>(false)
+  const [tipoComprobante, setTipoComprobante] = useState<string>("BOLETA")
+  const [ruc, setRuc] = useState<string>("")
+  
   // Ref para el input de archivo
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -179,6 +184,12 @@ export function FacturaFormModal({
       return
     }
     
+    // Validar que el RUC sea obligatorio cuando el tipo de comprobante es FACTURA
+    if (tipoComprobante === "FACTURA" && (!ruc || ruc.trim() === "" || ruc.length !== 11)) {
+      toast.error("El RUC es obligatorio y debe tener 11 dígitos para facturas")
+      return
+    }
+    
     setLoading(true)
 
     try {
@@ -189,9 +200,17 @@ export function FacturaFormModal({
         detalles: detalles || undefined,
         metodoPago: metodoPago,
         nroOperacion: nroOperacion || undefined,
+        tipo: tipoComprobante, // Agregamos el tipo de comprobante
       }
 
-      await facturasApi.create(facturaRequest, imagenOperacion || undefined)
+      // Usamos el método create modificado que enviará los parámetros conIgv y ruc
+      await facturasApi.create(
+        facturaRequest, 
+        imagenOperacion || undefined, 
+        conIgv, 
+        tipoComprobante === "FACTURA" ? ruc : undefined
+      )
+      
       toast.success("Factura creada exitosamente")
       onSuccess()
       onOpenChange(false)
@@ -338,26 +357,90 @@ export function FacturaFormModal({
           {/* Resumen de Facturación */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Resumen de Facturación</h3>
-
-            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
-              {/* Precio base del servicio */}
-              <div className="flex justify-between items-center border-b pb-2">
-                <div className="font-medium">Precio base del servicio:</div>
-                <div className="font-medium">{formatCurrency(mantenimiento.servicio?.precioBase || 0)}</div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Precio base del servicio:</span>
+                  <span className="font-medium">{formatCurrency(mantenimiento.servicio?.precioBase || 0)}</span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Subtotal de productos:</span>
+                  <span className="font-medium">{formatCurrency(productosUsados.reduce((sum, p) => sum + p.subtotal, 0))}</span>
+                </div>
+                
+                <Separator className="my-2" />
+                
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Total a Facturar:</span>
+                  <span className="font-bold text-lg">{formatCurrency(totalCalculado)}</span>
+                </div>
               </div>
               
-              {/* Subtotal de productos */}
-              {productosUsados.length > 0 && (
-                <div className="flex justify-between items-center border-b pb-2">
-                  <div className="font-medium">Subtotal de productos:</div>
-                  <div className="font-medium">{formatCurrency(productosUsados.reduce((sum, p) => sum + p.subtotal, 0))}</div>
+              {/* Opciones de Facturación */}
+              <div className="space-y-4 border-l pl-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="conIgv"
+                    checked={conIgv}
+                    onChange={(e) => setConIgv(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="conIgv" className="text-sm font-medium cursor-pointer">
+                    Incluir IGV (18%)
+                  </Label>
                 </div>
-              )}
-              
-              {/* Total */}
-              <div className="flex justify-between items-center pt-2">
-                <div className="text-lg font-semibold">Total a Facturar:</div>
-                <div className="text-xl font-bold">{formatCurrency(totalCalculado)}</div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="tipoComprobante" className="flex items-center gap-1">
+                    Tipo de Comprobante
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Select 
+                    value={tipoComprobante} 
+                    onValueChange={(value) => {
+                      setTipoComprobante(value)
+                      // Si cambia de FACTURA a BOLETA, limpiamos el RUC
+                      if (value === "BOLETA") {
+                        setRuc("")
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccione tipo de comprobante" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BOLETA">Boleta</SelectItem>
+                      <SelectItem value="FACTURA">Factura</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {tipoComprobante === "FACTURA" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="ruc" className="flex items-center gap-1">
+                      RUC
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="ruc"
+                      placeholder="Ingrese el RUC"
+                      value={ruc}
+                      onChange={(e) => {
+                        // Solo permitir números y limitar a 11 dígitos
+                        const value = e.target.value.replace(/[^0-9]/g, "").slice(0, 11)
+                        setRuc(value)
+                      }}
+                      required={tipoComprobante === "FACTURA"}
+                      className={tipoComprobante === "FACTURA" && (!ruc || ruc.length !== 11) ? "border-destructive" : ""}
+                    />
+                    {tipoComprobante === "FACTURA" && (!ruc || ruc.length !== 11) && (
+                      <p className="text-xs text-destructive mt-1">El RUC debe tener 11 dígitos</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

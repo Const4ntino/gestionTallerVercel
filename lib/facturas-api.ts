@@ -104,7 +104,12 @@ export const facturasApi = {
   },
 
   // Crear nueva factura
-  async create(factura: FacturaRequest, imagenOperacion?: File): Promise<FacturaResponse> {
+  async create(
+    factura: FacturaRequest, 
+    imagenOperacion?: File, 
+    conIgv: boolean = false, 
+    ruc?: string
+  ): Promise<FacturaResponse> {
     // Siempre usamos el endpoint con-imagen para asegurar que el trigger de la base de datos funcione correctamente
     const formData = new FormData()
     formData.append("factura", new Blob([JSON.stringify(factura)], { type: "application/json" }))
@@ -112,6 +117,12 @@ export const facturasApi = {
     // Agregamos la imagen si existe
     if (imagenOperacion) {
       formData.append("imagenOperacion", imagenOperacion)
+    }
+    
+    // Agregamos los nuevos parámetros
+    formData.append("conIgv", conIgv.toString())
+    if (ruc) {
+      formData.append("ruc", ruc)
     }
 
     const response = await fetch(`${API_BASE_URL}/api/facturas/con-imagen`, {
@@ -128,7 +139,13 @@ export const facturasApi = {
   },
 
   // Actualizar factura
-  async update(id: number, factura: FacturaRequest, imagenOperacion?: File): Promise<FacturaResponse> {
+  async update(
+    id: number, 
+    factura: FacturaRequest, 
+    imagenOperacion?: File, 
+    conIgv: boolean = false, 
+    ruc?: string
+  ): Promise<FacturaResponse> {
     // Siempre usamos el endpoint con-imagen para asegurar que el trigger de la base de datos funcione correctamente
     const formData = new FormData()
     formData.append("factura", new Blob([JSON.stringify(factura)], { type: "application/json" }))
@@ -136,6 +153,12 @@ export const facturasApi = {
     // Agregamos la imagen si existe
     if (imagenOperacion) {
       formData.append("imagenOperacion", imagenOperacion)
+    }
+    
+    // Agregamos los nuevos parámetros
+    formData.append("conIgv", conIgv.toString())
+    if (ruc) {
+      formData.append("ruc", ruc)
     }
 
     const response = await fetch(`${API_BASE_URL}/api/facturas/${id}/con-imagen`, {

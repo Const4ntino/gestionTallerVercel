@@ -77,6 +77,7 @@ export interface FacturaRequest {
   metodoPago: MetodoPago
   nroOperacion?: string
   imagenOperacion?: string
+  tipo: string // BOLETA o FACTURA
 }
 
 export interface CalculatedTotalResponse {
