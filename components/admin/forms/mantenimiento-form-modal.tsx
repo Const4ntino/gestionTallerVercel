@@ -219,8 +219,8 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const loadTalleres = async () => {
     try {
       setLoadingTalleres(true)
-      const talleresData = await talleresApi.getAll()
-      setTalleres(talleresData)
+      const talleresData = await talleresApi.filter({ size: 100, estado: "ACTIVO" })
+      setTalleres(talleresData.content || [])
     } catch (error) {
       toast.error("Error al cargar talleres")
       console.error(error)

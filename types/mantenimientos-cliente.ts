@@ -58,6 +58,7 @@ export interface TallerResponse {
   id: number
   nombre: string
   direccion: string
+  ciudad: string
   telefono: string
   email: string
   estado: string

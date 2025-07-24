@@ -56,7 +56,7 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
   const [loadingTalleres, setLoadingTalleres] = useState(false)
   const [loadingServicios, setLoadingServicios] = useState(false)
   const [selectedTallerId, setSelectedTallerId] = useState<number | null>(null)
-  
+
   // Estados para los combobox searchable
   const [openVehiculoCombobox, setOpenVehiculoCombobox] = useState(false)
   const [openTallerCombobox, setOpenTallerCombobox] = useState(false)
@@ -113,6 +113,7 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
     setLoadingTalleres(true)
     try {
       const data = await obtenerTalleresDisponibles()
+      console.log("Talleres cargados:", JSON.stringify(data, null, 2))
       setTalleres(data)
     } catch (error) {
       toast.error("Error al cargar talleres")
@@ -157,7 +158,7 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Solicitar Mantenimiento</DialogTitle>
           <DialogDescription>
@@ -200,7 +201,7 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
+                    <PopoverContent className="w-[500px] p-0" align="start">
                       <Command>
                         <CommandInput
                           placeholder="Buscar vehículo..."
@@ -272,7 +273,7 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
                         >
                           <span className="truncate">
                             {field.value && talleres.find((t) => t.id === field.value)
-                              ? talleres.find((t) => t.id === field.value)?.nombre
+                              ? `${talleres.find((t) => t.id === field.value)?.nombre}`
                               : loadingTalleres
                                 ? "Cargando talleres..."
                                 : "Selecciona el taller"}
@@ -281,7 +282,7 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
+                    <PopoverContent className="w-[500px] p-0" align="start">
                       <Command>
                         <CommandInput
                           placeholder="Buscar taller..."
@@ -296,10 +297,12 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
                               .filter(
                                 (taller) =>
                                   searchTaller === "" ||
-                                  taller.nombre.toLowerCase().includes(searchTaller.toLowerCase())
+                                  taller.nombre.toLowerCase().includes(searchTaller.toLowerCase()) ||
+                                  taller.direccion.toLowerCase().includes(searchTaller.toLowerCase())
                               )
                               .map((taller) => (
                                 <CommandItem
+                                  className="py-2"  
                                   key={taller.id}
                                   value={taller.nombre}
                                   onSelect={() => {
@@ -315,7 +318,15 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
                                       field.value === taller.id ? "opacity-100" : "opacity-0"
                                     )}
                                   />
-                                  {taller.nombre}
+                                  <div className="flex justify-between w-full">
+                                    <div className="flex-1 truncate">
+                                      <span className="font-medium">{taller.nombre}</span>
+                                      <span className="text-muted-foreground ml-1">({taller.ciudad})</span>
+                                    </div>
+                                    <div className="text-muted-foreground text-xs truncate ml-2 text-right">
+                                      {taller.direccion}
+                                    </div>
+                                  </div>
                                 </CommandItem>
                               ))}
                           </CommandGroup>
@@ -363,7 +374,7 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
+                    <PopoverContent className="w-[500px] p-0" align="start">
                       <Command>
                         <CommandInput
                           placeholder="Buscar servicio..."
@@ -382,6 +393,7 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
                               )
                               .map((servicio) => (
                                 <CommandItem
+                                  className="py-2"
                                   key={servicio.id}
                                   value={servicio.nombre}
                                   onSelect={() => {
@@ -396,7 +408,14 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
                                       field.value === servicio.id ? "opacity-100" : "opacity-0"
                                     )}
                                   />
-                                  {servicio.nombre}
+                                  <div className="flex justify-between w-full">
+                                    <div className="flex-1 truncate">
+                                      <span className="font-medium">{servicio.nombre}</span>
+                                    </div>
+                                    <div className="text-muted-foreground text-xs truncate ml-2 text-right">
+                                      S/{servicio.precioBase.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </div>
+                                  </div>
                                 </CommandItem>
                               ))}
                           </CommandGroup>
