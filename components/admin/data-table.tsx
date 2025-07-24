@@ -98,8 +98,9 @@ export function DataTable<T extends Record<string, any>>({
       )}
 
       {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
-        <Table className="min-w-full">
+      <div className="rounded-md border">
+        <div className="overflow-x-auto w-full">
+          <Table className="w-full table-auto">
           <TableHeader>
             <TableRow>
               {columns.map((column) => (
@@ -151,6 +152,7 @@ export function DataTable<T extends Record<string, any>>({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Pagination */}

@@ -16,6 +16,10 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import {
   crearMantenimiento,
@@ -52,6 +56,14 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
   const [loadingTalleres, setLoadingTalleres] = useState(false)
   const [loadingServicios, setLoadingServicios] = useState(false)
   const [selectedTallerId, setSelectedTallerId] = useState<number | null>(null)
+  
+  // Estados para los combobox searchable
+  const [openVehiculoCombobox, setOpenVehiculoCombobox] = useState(false)
+  const [openTallerCombobox, setOpenTallerCombobox] = useState(false)
+  const [openServicioCombobox, setOpenServicioCombobox] = useState(false)
+  const [searchVehiculo, setSearchVehiculo] = useState("")
+  const [searchTaller, setSearchTaller] = useState("")
+  const [searchServicio, setSearchServicio] = useState("")
 
   const form = useForm<FormData>({
     resolver: zodResolver(mantenimientoSchema),
@@ -159,24 +171,78 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
               control={form.control}
               name="vehiculoId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Vehículo *</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(Number.parseInt(value))} disabled={loadingVehiculos}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={loadingVehiculos ? "Cargando vehículos..." : "Selecciona tu vehículo"}
+                  <Popover
+                    open={openVehiculoCombobox}
+                    onOpenChange={(open) => {
+                      setOpenVehiculoCombobox(open)
+                      if (!open) setSearchVehiculo("")
+                    }}
+                  >
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openVehiculoCombobox}
+                          className="w-full justify-between bg-transparent"
+                          disabled={loadingVehiculos}
+                        >
+                          <span className="truncate">
+                            {field.value && vehiculos.find((v) => v.id === field.value)
+                              ? `${vehiculos.find((v) => v.id === field.value)?.placa} - ${vehiculos.find((v) => v.id === field.value)?.marca} ${vehiculos.find((v) => v.id === field.value)?.modelo}`
+                              : loadingVehiculos
+                                ? "Cargando vehículos..."
+                                : "Selecciona el vehículo"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Buscar vehículo..."
+                          value={searchVehiculo}
+                          onValueChange={setSearchVehiculo}
+                          className="h-9"
                         />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {vehiculos.map((vehiculo) => (
-                        <SelectItem key={vehiculo.id} value={vehiculo.id.toString()}>
-                          {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        <CommandList className="max-h-[300px] overflow-auto">
+                          <CommandEmpty>No se encontraron vehículos</CommandEmpty>
+                          <CommandGroup>
+                            {vehiculos
+                              .filter(
+                                (vehiculo) =>
+                                  searchVehiculo === "" ||
+                                  vehiculo.placa.toLowerCase().includes(searchVehiculo.toLowerCase()) ||
+                                  vehiculo.marca.toLowerCase().includes(searchVehiculo.toLowerCase()) ||
+                                  vehiculo.modelo.toLowerCase().includes(searchVehiculo.toLowerCase())
+                              )
+                              .map((vehiculo) => (
+                                <CommandItem
+                                  key={vehiculo.id}
+                                  value={`${vehiculo.placa} ${vehiculo.marca} ${vehiculo.modelo}`}
+                                  onSelect={() => {
+                                    field.onChange(vehiculo.id)
+                                    setOpenVehiculoCombobox(false)
+                                    setSearchVehiculo("")
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === vehiculo.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
@@ -186,29 +252,77 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
               control={form.control}
               name="tallerId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Taller *</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      const tallerId = Number.parseInt(value)
-                      field.onChange(tallerId)
-                      setSelectedTallerId(tallerId)
+                  <Popover
+                    open={openTallerCombobox}
+                    onOpenChange={(open) => {
+                      setOpenTallerCombobox(open)
+                      if (!open) setSearchTaller("")
                     }}
-                    disabled={loadingTalleres}
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={loadingTalleres ? "Cargando talleres..." : "Selecciona el taller"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {talleres.map((taller) => (
-                        <SelectItem key={taller.id} value={taller.id.toString()}>
-                          {taller.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openTallerCombobox}
+                          className="w-full justify-between bg-transparent"
+                          disabled={loadingTalleres}
+                        >
+                          <span className="truncate">
+                            {field.value && talleres.find((t) => t.id === field.value)
+                              ? talleres.find((t) => t.id === field.value)?.nombre
+                              : loadingTalleres
+                                ? "Cargando talleres..."
+                                : "Selecciona el taller"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Buscar taller..."
+                          value={searchTaller}
+                          onValueChange={setSearchTaller}
+                          className="h-9"
+                        />
+                        <CommandList className="max-h-[300px] overflow-auto">
+                          <CommandEmpty>No se encontraron talleres</CommandEmpty>
+                          <CommandGroup>
+                            {talleres
+                              .filter(
+                                (taller) =>
+                                  searchTaller === "" ||
+                                  taller.nombre.toLowerCase().includes(searchTaller.toLowerCase())
+                              )
+                              .map((taller) => (
+                                <CommandItem
+                                  key={taller.id}
+                                  value={taller.nombre}
+                                  onSelect={() => {
+                                    field.onChange(taller.id)
+                                    setSelectedTallerId(taller.id)
+                                    setOpenTallerCombobox(false)
+                                    setSearchTaller("")
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === taller.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {taller.nombre}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
@@ -218,33 +332,78 @@ export function MantenimientoFormModal({ open, onOpenChange, onSuccess }: Manten
               control={form.control}
               name="servicioId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Servicio *</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(Number.parseInt(value))}
-                    disabled={loadingServicios || !selectedTallerId}
+                  <Popover
+                    open={openServicioCombobox}
+                    onOpenChange={(open) => {
+                      setOpenServicioCombobox(open)
+                      if (!open) setSearchServicio("")
+                    }}
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            !selectedTallerId
-                              ? "Primero selecciona un taller"
-                              : loadingServicios
-                                ? "Cargando servicios..."
-                                : "Selecciona el servicio"
-                          }
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openServicioCombobox}
+                          className="w-full justify-between bg-transparent"
+                          disabled={loadingServicios || !selectedTallerId}
+                        >
+                          <span className="truncate">
+                            {field.value && servicios.find((s) => s.id === field.value)
+                              ? servicios.find((s) => s.id === field.value)?.nombre
+                              : !selectedTallerId
+                                ? "Primero selecciona un taller"
+                                : loadingServicios
+                                  ? "Cargando servicios..."
+                                  : "Selecciona el servicio"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Buscar servicio..."
+                          value={searchServicio}
+                          onValueChange={setSearchServicio}
+                          className="h-9"
                         />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {servicios.map((servicio) => (
-                        <SelectItem key={servicio.id} value={servicio.id.toString()}>
-                          {servicio.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        <CommandList className="max-h-[300px] overflow-auto">
+                          <CommandEmpty>No se encontraron servicios</CommandEmpty>
+                          <CommandGroup>
+                            {servicios
+                              .filter(
+                                (servicio) =>
+                                  searchServicio === "" ||
+                                  servicio.nombre.toLowerCase().includes(searchServicio.toLowerCase())
+                              )
+                              .map((servicio) => (
+                                <CommandItem
+                                  key={servicio.id}
+                                  value={servicio.nombre}
+                                  onSelect={() => {
+                                    field.onChange(servicio.id)
+                                    setOpenServicioCombobox(false)
+                                    setSearchServicio("")
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === servicio.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {servicio.nombre}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}

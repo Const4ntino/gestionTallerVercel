@@ -192,7 +192,7 @@ export default function AlertasPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -217,20 +217,6 @@ export default function AlertasPage() {
                     {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filtros.tipo || "all"} onValueChange={(value) => handleFiltroChange("tipo", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos los tipos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value="MANTENIMIENTO_PREVENTIVO">Mantenimiento Preventivo</SelectItem>
-                <SelectItem value="FALLA_MECANICA">Falla Mecánica</SelectItem>
-                <SelectItem value="STOCK_BAJO">Stock Bajo</SelectItem>
-                <SelectItem value="VEHICULO_LISTO">Vehículo Listo</SelectItem>
-                <SelectItem value="NUEVA_SOLICITUD">Nueva Solicitud</SelectItem>
               </SelectContent>
             </Select>
 
