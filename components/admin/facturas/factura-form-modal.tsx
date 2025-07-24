@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { QrDialog } from "./qr-dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -75,6 +76,9 @@ export function FacturaFormModal({
   const [conIgv, setConIgv] = useState<boolean>(false)
   const [tipoComprobante, setTipoComprobante] = useState<string>("BOLETA")
   const [ruc, setRuc] = useState<string>("")
+  
+  // Estado para controlar el diálogo de QR
+  const [qrDialogOpen, setQrDialogOpen] = useState(false)
   
   // Ref para el input de archivo
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -455,21 +459,34 @@ export function FacturaFormModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="metodoPago">Seleccione el método de pago</Label>
-                <Select 
-                  value={metodoPago} 
-                  onValueChange={(value) => setMetodoPago(value as MetodoPago)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione método de pago" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={MetodoPago.EN_EFECTIVO}>Efectivo</SelectItem>
-                    <SelectItem value={MetodoPago.TRANSFERENCIA}>Transferencia</SelectItem>
-                    <SelectItem value={MetodoPago.YAPE}>Yape</SelectItem>
-                    <SelectItem value={MetodoPago.PLIN}>Plin</SelectItem>
-                    <SelectItem value={MetodoPago.DEPOSITO}>Depósito</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2 items-center">
+                  <Select 
+                    value={metodoPago} 
+                    onValueChange={(value) => setMetodoPago(value as MetodoPago)}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Seleccione método de pago" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={MetodoPago.EN_EFECTIVO}>Efectivo</SelectItem>
+                      <SelectItem value={MetodoPago.TRANSFERENCIA}>Transferencia</SelectItem>
+                      <SelectItem value={MetodoPago.YAPE}>Yape</SelectItem>
+                      <SelectItem value={MetodoPago.PLIN}>Plin</SelectItem>
+                      <SelectItem value={MetodoPago.DEPOSITO}>Depósito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {metodoPago !== MetodoPago.EN_EFECTIVO && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setQrDialogOpen(true)}
+                    >
+                      Ver QR
+                    </Button>
+                  )}
+                </div>
               </div>
               
               {metodoPago !== MetodoPago.EN_EFECTIVO && (
@@ -572,6 +589,13 @@ export function FacturaFormModal({
           </DialogFooter>
         </form>
       </DialogContent>
+      
+      {/* Diálogo QR para métodos de pago */}
+      <QrDialog 
+        open={qrDialogOpen} 
+        onOpenChange={setQrDialogOpen} 
+        metodoPago={metodoPago} 
+      />
     </Dialog>
   )
 }

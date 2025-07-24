@@ -89,6 +89,12 @@ export const getAuthData = (): AuthData | null => {
   }
 }
 
+// Función para obtener solo el token de autenticación
+export const getAuthToken = (): string | null => {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("token")
+}
+
 // Función para verificar si el usuario está autenticado
 export const isAuthenticated = (): boolean => {
   return getAuthData() !== null
