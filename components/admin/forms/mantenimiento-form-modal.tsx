@@ -25,7 +25,7 @@ import {
 } from "@/lib/mantenimientos-api"
 import { talleresApi } from "@/lib/admin-api"
 import type { MantenimientoResponse, MantenimientoEstado, VehiculoResponse } from "@/types/mantenimientos"
-import type { TallerResponse } from "@/types/admin"
+import type { TallerResponse } from "@/types/talleres"
 
 const mantenimientoSchema = z.object({
   vehiculoId: z.number().min(1, "Debe seleccionar un vehículo"),
@@ -219,23 +219,12 @@ export function MantenimientoFormModal({ open, onOpenChange, mantenimiento, onSu
   const loadTalleres = async () => {
     try {
       setLoadingTalleres(true)
-      // Modificado para filtrar solo talleres ACTIVOS
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/talleres/filtrar?size=100&estado=ACTIVO`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-      
-      if (!response.ok) {
-        throw new Error("Error al obtener talleres")
-      }
-      
-      const data = await response.json()
-      setTalleres(data.content || [])
+      const talleresData = await talleresApi.getAll()
+      setTalleres(talleresData)
     } catch (error) {
       toast.error("Error al cargar talleres")
       console.error(error)
+      setTalleres([])
     } finally {
       setLoadingTalleres(false)
     }
