@@ -62,91 +62,10 @@ export function DashboardMetrics({ data, isLoading }: DashboardMetricsProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Resumen del Dashboard</h3>
-        {/* Botón de PDF oculto temporalmente por solicitud del cliente */}
-        {false && (
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            className="bg-red-600 hover:bg-red-700 text-white"
-            onClick={async () => {
-              try {
-                // Obtener el token de autenticación
-                const token = getAuthToken();
-                if (!token) {
-                  toast({
-                    title: "Error",
-                    description: "No se pudo autenticar. Por favor, inicie sesión nuevamente.",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                
-                // Construir la URL con los mismos parámetros que se usaron para cargar los datos
-                const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/summary/pdf`);
-                
-                // Obtener los parámetros de la URL actual para mantener los mismos filtros
-                const urlParams = new URLSearchParams(window.location.search);
-                const startDate = urlParams.get('startDate');
-                const endDate = urlParams.get('endDate');
-                const groupBy = urlParams.get('groupBy');
-                
-                // Añadir los parámetros a la URL si existen
-                if (startDate) url.searchParams.append('startDate', startDate);
-                if (endDate) url.searchParams.append('endDate', endDate);
-                if (groupBy) url.searchParams.append('groupBy', groupBy);
-                
-                toast({
-                  title: "Descargando PDF",
-                  description: "Preparando la descarga del reporte...",
-                });
-                
-                // Realizar la petición para descargar el PDF
-                const response = await fetch(url.toString(), {
-                  method: 'GET',
-                  headers: {
-                    'Authorization': `Bearer ${token}`,
-                  },
-                });
-                
-                if (!response.ok) {
-                  throw new Error(`Error al descargar el PDF: ${response.statusText}`);
-                }
-                
-                // Convertir la respuesta a blob
-                const blob = await response.blob();
-                
-                // Crear un objeto URL para el blob
-                const downloadUrl = window.URL.createObjectURL(blob);
-                
-                // Crear un elemento <a> para descargar el archivo
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = 'dashboard-report.pdf';
-                document.body.appendChild(link);
-                link.click();
-                
-                // Limpiar
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(downloadUrl);
-                
-                toast({
-                  title: "Descarga completada",
-                  description: "El reporte se ha descargado correctamente.",
-                });
-              } catch (error) {
-                console.error('Error al descargar el PDF:', error);
-                toast({
-                  title: "Error",
-                  description: "No se pudo descargar el reporte. Por favor, inténtelo de nuevo.",
-                  variant: "destructive",
-                });
-              }
-            }}
-          >
-            <FileDown className="mr-2 h-4 w-4" />
-            Descargar PDF
-          </Button>
-        )}
+        {/* 
+          Botón de PDF oculto temporalmente por solicitud del cliente
+          Para volver a mostrar el botón, eliminar la condición {false && (...)} o cambiarla a {true && (...)}
+        */}
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
